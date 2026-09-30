@@ -44,7 +44,7 @@ class Creature:
 
         self.instruction_pointer = "start"
 
-    def __is_alive__(self) -> bool:
+    def is_alive(self) -> bool:
         """Una criatura muere si su vida llega a 0 o supera su esperanza de vida"""
         if self.health <= 0 or self.age >= self.lifespan:
             self.alive = False

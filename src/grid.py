@@ -2,7 +2,7 @@ from entities import Tile, Terrain, GameObject, Creature
 
 class WorldGrid:
     """Matriz del mapa y las colisiones"""
-    def init(self, width: int, height: int):
+    def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
         # Crea una matriz vacía de ancho x alto rellena de casillas (Tile)
