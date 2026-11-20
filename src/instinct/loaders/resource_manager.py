@@ -204,3 +204,19 @@ class ResourceManager:
 
     def get_creature(self, name: str):
         return self.creatures.get(name)
+
+    def create_creature(self, name: str):
+        """Crea una instancia independiente de una criatura registrada."""
+
+        creature_template = self.get_creature(name)
+
+        if creature_template is None:
+            return None
+
+        filepath = (
+            self.resource_dir
+            / "creatures"
+            / f"{name.lower()}.ins"
+        )
+
+        return self.creature_loader.load_file(filepath)

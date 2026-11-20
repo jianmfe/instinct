@@ -1,4 +1,3 @@
-
 from instinct.frontend.core.game import Game
 from instinct.frontend.scenes.main_menu import MainMenu
 

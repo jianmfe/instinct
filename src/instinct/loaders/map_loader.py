@@ -117,8 +117,7 @@ class MapLoader:
 
                 elif char in object_by_char:
                     tile.terrain = deepcopy(default_terrain)
-                    world.place_object(x, y, deepcopy(object_by_char[char]))
-
+                    world.place_object(deepcopy(object_by_char[char]), x, y)
                 else:
                     self._error(
                         source,

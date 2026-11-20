@@ -1,8 +1,10 @@
+
 from random import Random
 from collections.abc import Callable
 from typing import Any
 
 from instinct.engine.event_log import EventLog
+from instinct.engine.action_event import ActionEventLog
 from instinct.runtime.environment import Environment
 from instinct.runtime.program import Program
 from instinct.world.entities import Creature
@@ -48,6 +50,7 @@ class ExecutionContext:
         world: WorldGrid,
         rng: Random,
         event_log: EventLog,
+        action_event_log: ActionEventLog | None = None,
         action_registry: Any = None,
         function_registry: Any = None,
     ) -> None:
@@ -68,11 +71,25 @@ class ExecutionContext:
         if not isinstance(event_log, EventLog):
             raise TypeError("El registro debe ser una instancia de EventLog.")
 
+        if action_event_log is not None and not isinstance(
+            action_event_log, ActionEventLog
+        ):
+            raise TypeError(
+                "El registro de acontecimientos debe ser una instancia "
+                "de ActionEventLog."
+            )
+
         self.program = program
         self.creature_obj = creature
         self.world = world
         self.rng = rng
         self.event_log = event_log
+
+        self.action_event_log = (
+            action_event_log
+            if action_event_log is not None
+            else ActionEventLog()
+        )
 
         from instinct.perceptions.registry import PerceptionRegistry
 
@@ -126,7 +143,6 @@ class ExecutionContext:
 
         creature = self.creature_obj
 
-        # Propiedades propias de la criatura.
         creature_values: dict[str, Value] = {
             "creature": creature.name,
             "species": creature.name,
@@ -145,8 +161,6 @@ class ExecutionContext:
         if name in creature_values:
             return creature_values[name]
 
-        # Las percepciones y constantes tienen prioridad sobre
-        # las variables creadas por el programa.
         if self.perception_registry.has_perception(name):
             return self.perception_registry.get(self, name)
 
@@ -189,6 +203,22 @@ class ExecutionContext:
             )
 
         return self.function_executor(self, name, args)
+
+    def publish_action_event(
+        self,
+        event_type: str,
+        target: Creature | None = None,
+        data: dict[str, Any] | None = None,
+    ) -> None:
+        """Publica un acontecimiento de la criatura en ejecución."""
+
+        self.action_event_log.publish(
+            tick=self.current_tick,
+            event_type=event_type,
+            actor=self.creature_obj,
+            target=target,
+            data=data,
+        )
 
     def execute_action(self, name: str, args: list[Value]) -> None:
         """Ejecuta una acción del lenguaje."""

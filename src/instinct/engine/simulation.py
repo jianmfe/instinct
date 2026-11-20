@@ -11,6 +11,7 @@ import random
 
 from instinct.actions.registry import ActionRegistry
 from instinct.backend.ast_nodes import ProgramNode
+from instinct.engine.action_event import ActionEventLog
 from instinct.engine.event_log import EventLog
 from instinct.engine.natural_laws import NaturalLaws
 from instinct.engine.turn_manager import TurnExecutor, TurnManager
@@ -44,7 +45,10 @@ class Simulation:
         # Un único generador aleatorio compartido por la simulación.
         self.rng = random.Random(seed)
 
+        # Registros compartidos de acontecimientos.
         self.event_log = EventLog()
+        self.action_event_log = ActionEventLog()
+
         self.turn_manager = TurnManager(self.rng)
 
         # Registros compartidos por todas las criaturas.
@@ -81,6 +85,7 @@ class Simulation:
             world=self.world,
             rng=self.rng,
             event_log=self.event_log,
+            action_event_log=self.action_event_log,
             action_registry=self.action_registry,
             function_registry=self.function_registry,
         )

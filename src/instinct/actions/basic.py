@@ -3,7 +3,8 @@
 
 from instinct.actions.base import Action
 from instinct.runtime.execution_context import ExecutionContext
-from instinct.world.creature import Creature
+from instinct.world.entities import Creature
+
 
 class WaitAction(Action):
     name = "wait"
@@ -45,6 +46,9 @@ class MoveAction(Action):
         if dx == 0 and dy == 0:
             return
 
+        start_x = creature.x
+        start_y = creature.y
+
         # Avanza casilla por casilla hasta alcanzar speed
         # o encontrar un obstáculo.
         for _ in range(max(0, speed)):
@@ -65,6 +69,24 @@ class MoveAction(Action):
             world.remove_creature(current_x, current_y)
             world.place_creature(creature, next_x, next_y)
 
+        distance = max(
+            abs(creature.x - start_x),
+            abs(creature.y - start_y),
+        )
+
+        if distance > 0:
+            context.publish_action_event(
+                "move",
+                data={
+                    "start": (start_x, start_y),
+                    "end": (creature.x, creature.y),
+                    "distance": distance,
+                    "dx": dx,
+                    "dy": dy,
+                    "speed": speed,
+                },
+            )
+
 
 class AttackAction(Action):
     name = "attack"
@@ -83,6 +105,15 @@ class AttackAction(Action):
 
         self.require_direction(dx, dy, self.name)
 
+        context.publish_action_event(
+            "attack",
+            data={
+                "dx": dx,
+                "dy": dy,
+                "damage": damage,
+            },
+        )
+
         self._attack_target(context, dx, dy, damage)
 
     @staticmethod
@@ -91,7 +122,9 @@ class AttackAction(Action):
         dx: int,
         dy: int,
         damage: int,
-    ) -> None:
+    ) -> Creature | None:
+        """Aplica daño al objetivo y registra sus consecuencias."""
+
         creature = context.creature_obj
         world = context.world
 
@@ -99,7 +132,7 @@ class AttackAction(Action):
         target_y = creature.y + dy
 
         if not world.in_bounds(target_x, target_y):
-            return
+            return None
 
         tile = world.get_tile(target_x, target_y)
 
@@ -108,13 +141,22 @@ class AttackAction(Action):
                 0,
                 tile.terrain.reserve - damage,
             )
-            return
+            return None
 
         # Si hay una criatura, recibe el daño.
         target_creature = tile.creature
 
         if target_creature is not None:
             target_creature.health -= damage
+
+            context.publish_action_event(
+                "damage",
+                target=target_creature,
+                data={
+                    "damage": damage,
+                    "remaining_health": target_creature.health,
+                },
+            )
 
             if target_creature.health <= 0:
                 tile.remove_creature()
@@ -128,7 +170,16 @@ class AttackAction(Action):
                     "muerte",
                 )
 
-            return
+                context.publish_action_event(
+                    "death",
+                    target=target_creature,
+                    data={
+                        "cause": "attack",
+                        "damage": damage,
+                    },
+                )
+
+            return target_creature
 
         # Si hay un objeto, pierde reserva.
         target_object = tile.object
@@ -142,13 +193,15 @@ class AttackAction(Action):
             if target_object.reserve <= 0:
                 tile.remove_object()
 
-            return
+            return None
 
         # Si no hay ocupante, el objetivo es el terreno.
         tile.terrain.reserve = max(
             0,
             tile.terrain.reserve - damage,
         )
+
+        return None
 
 
 class ConsumeAction(Action):
@@ -169,10 +222,21 @@ class ConsumeAction(Action):
 
         self.require_direction(dx, dy, self.name)
 
+        context.publish_action_event(
+            "consume",
+            data={
+                "dx": dx,
+                "dy": dy,
+                "damage": damage,
+                "heal": heal,
+            },
+        )
+
         AttackAction._attack_target(context, dx, dy, damage)
 
         # La curación no depende de cuánto daño se haya causado.
-        context.creature_obj.health += heal
+        creature = context.creature_obj
+        creature.health += heal
 
 
 class ReproduceAction(Action):
@@ -237,6 +301,15 @@ class ReproduceAction(Action):
         mother.health -= child_health
         world.place_creature(child, target_x, target_y)
 
+        context.publish_action_event(
+            "reproduce",
+            target=child,
+            data={
+                "child_health": child_health,
+                "position": (target_x, target_y),
+            },
+        )
+
 
 class RoarAction(Action):
     name = "roar"
@@ -258,6 +331,13 @@ class RoarAction(Action):
             "rugido",
             x=creature.x,
             y=creature.y,
+        )
+
+        context.publish_action_event(
+            "roar",
+            data={
+                "message": value,
+            },
         )
 
 
