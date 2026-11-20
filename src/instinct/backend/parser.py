@@ -31,7 +31,10 @@ class Parser:
             token = self.current
             self.advance()
             return token
-        raise SyntaxError(f"Syntax Error line {getattr(self.current, 'line', '?')} : {error_msg}")
+        raise SyntaxError(
+            f"Error sintáctico en la línea {getattr(self.current, 'line', '?')}: "
+            f"{error_msg}"
+        )
 
     def peek_type(self):
         if self.pos + 1 < len(self.tokens):
@@ -44,45 +47,117 @@ class Parser:
         statements = self.parse_body()
         has_start = any(isinstance(stmt, LabelNode) and stmt.name == 'start' for stmt in statements)
         if not has_start:
-            raise SyntaxError("Error de compilacion: EL programa no contiene la etiqueta obligatoria 'start:'.")
+            raise SyntaxError(
+                "Error de compilación: el programa no contiene la etiqueta "
+                "obligatoria 'start:'."
+            )
 
         return ProgramNode(header=header, statements=statements, lineno=getattr(header, 'lineno', 1))
 
 
+
     def parse_header(self):
         header_data = {}
-        required_keys = {'creature', 'faction', 'health', 'vision', 'lifespan'}
+        required_keys = {
+            'creature', 'faction', 'health', 'vision', 'lifespan'
+        }
+
+        first_nonempty_line = True
         header_lineno = 1
 
-        while self.current and len(header_data) < 5:
+        while self.current:
+            # Ignorar saltos de línea y tokens vacíos.
+            if self.current.type == TokenType.NEWLINE:
+                self.advance()
+                continue
+
+            if not self.current.value or str(self.current.value).strip() == "":
+                self.advance()
+                continue
+
+            # La primera línea no vacía debe comenzar con creature.
+            if first_nonempty_line:
+                if (
+                    not self.match(TokenType.IDENTIFIER)
+                    or self.current.value != 'creature'
+                ):
+                    raise SyntaxError(
+                        f"Error sintáctico en la línea {getattr(self.current, 'line', 1)}: "
+                        "la primera línea de la cabecera debe ser "
+                        "'creature Nombre'."
+                    )
+
+                first_nonempty_line = False
+
+            # La cabecera termina cuando aparece start.
             if self.match(TokenType.IDENTIFIER) and self.current.value == 'start':
                 break
 
-            if self.match(TokenType.IDENTIFIER):
-                key_token = self.current
-                key = key_token.value
-                header_lineno = getattr(key_token, 'line', 1)
-                self.advance()
+            if not self.match(TokenType.IDENTIFIER):
+                raise SyntaxError(
+                    f"Error sintáctico en la línea {getattr(self.current, 'line', 1)}: "
+                    f"token inesperado en la cabecera: '{self.current.value}'."
+                )
 
-                if key in  ('creature', 'faction'):
-                    val_token = self.consume(TokenType.IDENTIFIER, f"Esperando un nombre para '{key}'")
-                    header_data[key] = val_token.value
-                elif key in ('health', 'vision', 'lifespan'):
-                    val_token = self.consume(TokenType.NUMBER, f"Esperando un entero para '{key}")
-                    val_num = int(val_token.value)
+            key_token = self.current
+            key = key_token.value
+            header_lineno = getattr(key_token, 'line', 1)
+            self.advance()
 
-                    if val_num <= 0:
-                        raise SyntaxError(f"Error en la linea: {getattr(val_token, 'line', header_lineno)}: El atributo {key} debe ser un valor positivo (se encontro {val_num}).")
+            if key not in required_keys:
+                raise SyntaxError(
+                    f"Error sintáctico en la línea {header_lineno}: "
+                    f"atributo de cabecera desconocido '{key}'."
+                )
 
-                    header_data[key] = int(val_token.value)
-                else:
-                    raise SyntaxError(f"Error en la linea {header_lineno}: Atributo de cabecera desconocido o fuera de lugar '{key}'")
+            if key in header_data:
+                raise SyntaxError(
+                    f"Error sintáctico en la línea {header_lineno}: "
+                    f"el atributo '{key}' está repetido."
+                )
+
+            if key in ('creature', 'faction'):
+                val_token = self.consume(
+                    TokenType.IDENTIFIER,
+                    f"se esperaba un nombre para '{key}'."
+                )
+                header_data[key] = val_token.value
+
             else:
-                self.advance()
+                val_token = self.consume(
+                    TokenType.NUMBER,
+                    f"se esperaba un número entero para '{key}'."
+                )
+
+                value = int(val_token.value)
+
+                if value <= 0:
+                    raise SyntaxError(
+                        f"Error sintáctico en la línea {getattr(val_token, 'line', header_lineno)}: "
+                        f"el atributo '{key}' debe ser mayor que cero."
+                    )
+
+                header_data[key] = value
+
+            # Cada atributo debe ocupar su propia línea.
+            if self.current and self.current.type != TokenType.NEWLINE:
+                raise SyntaxError(
+                    f"Error sintáctico en la línea {getattr(self.current, 'line', header_lineno)}: "
+                    "contenido inesperado después del atributo de cabecera."
+                )
 
         missing = required_keys - set(header_data.keys())
+
         if missing:
-            raise SyntaxError(f"Error de compilacion: Faltan atributos obligatorios en la cabecera: {', '.join(missing)}")
+            raise SyntaxError(
+                "Error de compilación: faltan atributos obligatorios: "
+                + ", ".join(sorted(missing))
+            )
+
+        if not self.current:
+            raise SyntaxError(
+                "Error de compilación: falta la etiqueta obligatoria 'start:'."
+            )
 
         return HeaderNode(
             creature=header_data['creature'],
@@ -90,7 +165,7 @@ class Parser:
             health=header_data['health'],
             vision=header_data['vision'],
             lifespan=header_data['lifespan'],
-            lineno=header_lineno
+            lineno=1
         )
 
     def parse_body(self):
@@ -102,54 +177,112 @@ class Parser:
         return statements
 
     def parse_statement(self):
-        while self.current and (not self.current.value or str(self.current.value).strip() == ""):
+    # Ignorar saltos de línea y tokens vacíos
+        while self.current and (
+            not self.current.value
+            or str(self.current.value).strip() == ""
+        ):
             self.advance()
 
         if not self.current:
             return None
 
+        statement_line = getattr(self.current, 'line', 1)
+
+        # LABEL:
         if self.match(TokenType.IDENTIFIER) and self.peek_type() == TokenType.COLON:
             label_token = self.current
-            label_name = self.current.value
-            self.advance()
-            self.advance()
-            return LabelNode(name=label_name, lineno=getattr(label_token, 'line', 1))
+            label_name = label_token.value
 
+            self.advance()
+            self.advance()
+
+            return LabelNode(
+                name=label_name,
+                lineno=getattr(label_token, 'line', 1)
+            )
+
+        # GOTO LABEL
         if self.match(TokenType.GOTO):
             goto_token = self.current
             self.advance()
-            target_token = self.consume(TokenType.IDENTIFIER, "Wait for the label")
-            return GotoNode(target=target_token.value,lineno=getattr(goto_token, 'line', 1))
 
+            target_token = self.consume(
+                TokenType.IDENTIFIER,
+                "se esperaba una etiqueta después de 'goto'."
+            )
+
+            return GotoNode(
+                target=target_token.value,
+                lineno=getattr(goto_token, 'line', 1)
+            )
+
+        # IF condition GOTO LABEL
         if self.match(TokenType.IF):
             if_token = self.current
             self.advance()
-            condition = self.parse_expr()
-            self.consume(TokenType.GOTO, "Waiting for the 'goto' after the 'if' statment")
-            target_token = self.consume(TokenType.IDENTIFIER, "Waiting for the label")
-            return IfGotoNode(condition=condition, target=target_token.value, lineno=getattr(if_token, 'line', 1))
 
+            condition = self.parse_expr()
+
+            self.consume(
+                TokenType.GOTO,
+                "se esperaba 'goto' después de la condición."
+            )
+
+            target_token = self.consume(
+                TokenType.IDENTIFIER,
+                "se esperaba una etiqueta después de 'goto'."
+            )
+
+            return IfGotoNode(
+                condition=condition,
+                target=target_token.value,
+                lineno=getattr(if_token, 'line', 1)
+            )
+
+        # ASSIGNMENT OR FUNCTION/ACTION CALL
         if self.match(TokenType.IDENTIFIER):
             ident_token = self.current
             self.advance()
 
+            # Assignment: variable = expression
             if self.match(TokenType.ASSIGN):
                 self.advance()
+
                 expr = self.parse_expr()
-                return AssignNode(name=ident_token.value, value=expr, lineno=getattr(ident_token, 'line', 1))
 
-            elif self.match(TokenType.LPAREN):
+                return AssignNode(
+                    name=ident_token.value,
+                    value=expr,
+                    lineno=getattr(ident_token, 'line', 1)
+                )
+
+            # Function/action call: name(arguments)
+            if self.match(TokenType.LPAREN):
                 self.advance()
+
                 args = self.parse_arguments()
-                self.consume(TokenType.RPAREN, "Parenthisis not closed missing ')'")
-                return ActionNode(name=ident_token.value, args=args, lineno=getattr(ident_token, 'line', 1))
 
-            else:
-                raise SyntaxError(f"Instruction not valid for '{ident_token.value}'")
+                self.consume(
+                    TokenType.RPAREN,
+                    "falta ')' para cerrar la lista de argumentos."
+                )
 
-        if self.current:
-            raise SyntaxError(f"Error de sintaxis en la linea {getattr(self.current, 'line', 1)}: Token inesperado o instruccion mal formada '{self.current.value}'")
-        return None
+                return ActionNode(
+                    name=ident_token.value,
+                    args=args,
+                    lineno=getattr(ident_token, 'line', 1)
+                )
+
+            raise SyntaxError(
+                f"Error sintáctico en la línea {statement_line}: "
+                f"se esperaba '=' o '(' después del identificador '{ident_token.value}'."
+            )
+
+        raise SyntaxError(
+            f"Error sintáctico en la línea {statement_line}: "
+            f"token inesperado '{self.current.value}'."
+        )
 
     def parse_arguments(self):
         args = []
@@ -172,28 +305,77 @@ class Parser:
         return left
 
     def parse_and(self):
-        left = self.parse_equality()
+        left = self.parse_not()
 
         while self.match(TokenType.AND):
             op_token = self.current
             self.advance()
-            right = self.parse_equality()
-            left = BinaryOpNode(left=left, op=op_token.value, right=right, lineno=getattr(op_token, 'line', 1))
+            right = self.parse_not()
+
+            left = BinaryOpNode(
+                left=left,
+                op=op_token.value,
+                right=right,
+                lineno=getattr(op_token, 'line', 1)
+            )
 
         return left
 
+    def parse_not(self):
+        if self.match(TokenType.NOT):
+            op_token = self.current
+            self.advance()
+
+            operand = self.parse_not()
+
+            return UnaryOpNode(
+                op=op_token.value,
+                operand=operand,
+                lineno=getattr(op_token, 'line', 1)
+            )
+
+        return self.parse_equality()
+
     def parse_equality(self):
+        left = self.parse_comparison()
+
+        while self.current and self.current.type in (
+            TokenType.EQUAL,
+            TokenType.NOTEQUAL
+        ):
+            op_token = self.current
+            self.advance()
+            right = self.parse_comparison()
+
+            left = BinaryOpNode(
+                left=left,
+                op=op_token.value,
+                right=right,
+                lineno=getattr(op_token, 'line', 1)
+            )
+
+        return left
+
+
+    def parse_comparison(self):
         left = self.parse_additive()
 
         while self.current and self.current.type in (
-            TokenType.EQUAL, TokenType.NOTEQUAL,
-            TokenType.LESS, TokenType.LESSEQUAL,
-            TokenType.GREATER, TokenType.GREATEREQUAL,
+            TokenType.LESS,
+            TokenType.LESSEQUAL,
+            TokenType.GREATER,
+            TokenType.GREATEREQUAL
         ):
             op_token = self.current
             self.advance()
             right = self.parse_additive()
-            left = BinaryOpNode(left=left, op=op_token.value, right=right, lineno=getattr(op_token, 'line', 1))
+
+            left = BinaryOpNode(
+                left=left,
+                op=op_token.value,
+                right=right,
+                lineno=getattr(op_token, 'line', 1)
+            )
 
         return left
 
@@ -220,11 +402,17 @@ class Parser:
         return left
 
     def parse_unary(self):
-        if self.current and self.current.type in (TokenType.MINUS, TokenType.NOT):
+        if self.match(TokenType.MINUS):
             op_token = self.current
             self.advance()
+
             operand = self.parse_unary()
-            return UnaryOpNode(op=op_token.value, operand=operand, lineno=getattr(op_token, 'line', 1))
+
+            return UnaryOpNode(
+                op=op_token.value,
+                operand=operand,
+                lineno=getattr(op_token, 'line', 1)
+            )
 
         return self.parse_primary()
 
@@ -246,7 +434,10 @@ class Parser:
             if self.match(TokenType.LPAREN):
                 self.advance()
                 args = self.parse_arguments()
-                self.consume(TokenType.RPAREN, "Missin ')' after the args")
+                self.consume(
+                    TokenType.RPAREN,
+                    "falta ')' después de los argumentos."
+                )
                 return FunctionCallNode(name=ident_token.value, args=args, lineno=getattr(ident_token, 'line', 1))
 
             return IdentifierNode(name=ident_token.value, lineno=getattr(ident_token, 'line', 1))
@@ -255,7 +446,16 @@ class Parser:
         if self.match(TokenType.LPAREN):
             self.advance()
             expr = self.parse_expr()
-            self.consume(TokenType.RPAREN, "Missin ')' after the args")
+            self.consume(TokenType.RPAREN, "falta ')' después de los argumentos.")
             return expr
 
-        raise SyntaxError(f"Expression not valid, Unexpected Token: {self.current}")
+        if self.current is None:
+            raise SyntaxError(
+                "Error sintáctico: final inesperado de la entrada; "
+                "se esperaba una expresión."
+            )
+
+        raise SyntaxError(
+            f"Error sintáctico en la línea {getattr(self.current, 'line', '?')}: "
+            f"se esperaba una expresión, pero se encontró '{self.current.value}'."
+        )

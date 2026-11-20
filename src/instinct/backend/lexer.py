@@ -6,7 +6,7 @@ class LexerError(Exception):
 
 class Lexer:
     def __init__(self, code: str):
-        self.code = code
+        self.code = code.replace('\r\n', '\n').replace('\r', '\n')
         regex_parts = [f"(?P<{token.name}>{token.pattern})" for token in TokenType]
         self.master_regex = re.compile("|".join(regex_parts))
 
@@ -34,7 +34,10 @@ class Lexer:
 
 
             if kind == "MISMATCH":
-                raise LexerError(f"Caracter no permitido {value!r} en la line {line}, columna {column}")
+                raise LexerError(
+                    f"Error léxico en la línea {line}, columna {column}: "
+                    f"carácter no permitido: {value!r}."
+                )
 
             token_type = TokenType[str(kind)]
             parsed_value: str | int = value

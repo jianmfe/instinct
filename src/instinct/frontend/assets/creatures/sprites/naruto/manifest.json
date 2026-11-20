@@ -1,0 +1,104 @@
+{
+  "idle": {
+    "file": "idle.png",
+    "frames": 16,
+    "frame_size": [
+      64,
+      64
+    ],
+    "sheet_size": [
+      1024,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  },
+  "walk": {
+    "file": "walk.png",
+    "frames": 22,
+    "frame_size": [
+      64,
+      64
+    ],
+    "sheet_size": [
+      1408,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  },
+  "run": {
+    "file": "run.png",
+    "frames": 20,
+    "frame_size": [
+      64,
+      64
+    ],
+    "sheet_size": [
+      1280,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  },
+  "attack": {
+    "file": "attack.png",
+    "frames": 20,
+    "frame_size": [
+      64,
+      64
+    ],
+    "sheet_size": [
+      1280,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  },
+  "damage": {
+    "file": "damage.png",
+    "frames": 12,
+    "frame_size": [
+      64,
+      64
+    ],
+    "sheet_size": [
+      768,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  },
+  "death": {
+    "file": "death.png",
+    "frames": 20,
+    "frame_size": [
+      64,
+      64
+    ],
+    "sheet_size": [
+      1280,
+      64
+    ],
+    "mode": "RGBA",
+    "alpha_extrema": [
+      0,
+      255
+    ]
+  }
+}
