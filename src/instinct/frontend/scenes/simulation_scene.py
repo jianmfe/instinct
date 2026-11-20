@@ -1,8 +1,6 @@
-
 from pathlib import Path
 
 import pygame
-
 
 from instinct.frontend.scenes.base_scene import BaseScene
 from instinct.frontend.settings import DEFAULT_TILE_SIZE
@@ -19,7 +17,15 @@ from instinct.frontend.menu.asset_loader import AssetLoader
 from instinct.frontend.world_view.camera import Camera
 from instinct.frontend.world_view.world_renderer import WorldRenderer
 from instinct.frontend.world_view.creature_renderer import CreatureRenderer
+from instinct.frontend.animation.animation_controller import AnimationController
+from instinct.frontend.adapters.event_adapter import EventAdapter
 from instinct.frontend.world_view.selection import Selection
+
+from instinct.frontend.interface.theme_manager import ThemeManager
+from instinct.frontend.interface.top_bar import TopBar
+from instinct.frontend.interface.creature_panel import CreaturePanel
+from instinct.frontend.interface.event_panel import EventPanel
+from instinct.frontend.interface.simulation_controls import SimulationControls
 
 
 class SimulationScene(BaseScene):
@@ -27,9 +33,6 @@ class SimulationScene(BaseScene):
 
     def __init__(self, game):
         super().__init__(game)
-
-        self.title_font = pygame.font.Font(None, 36)
-        self.info_font = pygame.font.Font(None, 24)
 
         self.resource_manager = None
         self.simulation = None
@@ -42,8 +45,12 @@ class SimulationScene(BaseScene):
             show_grid=True,
         )
 
+        self.animation_controller = AnimationController()
+        self.event_adapter = None
+
         self.creature_renderer = CreatureRenderer(
             self.asset_loader,
+            animation_controller=self.animation_controller,
         )
 
         self.selection = Selection()
@@ -57,7 +64,15 @@ class SimulationScene(BaseScene):
         self.dragging = False
         self.last_mouse_position = None
 
+        # Componentes del HUD.
+        self.theme_manager = ThemeManager()
+        self.top_bar = TopBar(self.theme_manager)
+        self.creature_panel = CreaturePanel()
+        self.event_panel = None
+        self.simulation_controls = None
+
         self._load_resources()
+        self._update_layout()
 
     def _load_resources(self):
         """Carga los recursos y prepara el primer mapa disponible."""
@@ -77,7 +92,6 @@ class SimulationScene(BaseScene):
             )
             return
 
-        # Seleccionamos provisionalmente el primer mapa disponible.
         self.map_name = next(iter(self.resource_manager.maps))
 
         self._load_map(self.map_name)
@@ -102,24 +116,19 @@ class SimulationScene(BaseScene):
             simulation=self.simulation,
         )
 
-        screen_width, screen_height = self.game.screen.get_size()
-
-        viewport = pygame.Rect(
-            40,
-            90,
-            screen_width - 80,
-            screen_height - 150,
+        self.event_adapter = EventAdapter(
+            self.simulation.action_event_log,
+            self.animation_controller,
         )
 
+        screen_width, screen_height = self.game.screen.get_size()
+
         self.camera = Camera(
-            viewport=viewport,
+            viewport=pygame.Rect(0, 0, screen_width, screen_height),
             world_width=self.world.width,
             world_height=self.world.height,
             tile_size=DEFAULT_TILE_SIZE,
         )
-
-        # Utilizamos el zoom inicial definido para el proyecto.
-        self.camera.zoom = 1
 
         self.world_renderer.set_world(self.world)
         self.world_renderer.set_camera(self.camera)
@@ -143,6 +152,88 @@ class SimulationScene(BaseScene):
 
         print(f"Naruto colocado en ({x}, {y}).")
 
+    def _update_layout(self):
+        """Calcula las áreas del mapa y los paneles del HUD."""
+
+        screen_width, screen_height = self.game.screen.get_size()
+
+        margin = 20
+        gap = 14
+
+        left_width = min(
+            250,
+            max(150, int(screen_width * 0.16)),
+        )
+
+        right_width = min(
+            310,
+            max(190, int(screen_width * 0.20)),
+        )
+
+        panel_top = 92
+        bottom_height = 94
+
+        left_rect = pygame.Rect(
+            margin,
+            panel_top,
+            left_width,
+            max(120, screen_height - panel_top - bottom_height - margin),
+        )
+
+        right_rect = pygame.Rect(
+            screen_width - margin - right_width,
+            panel_top,
+            right_width,
+            max(120, screen_height - panel_top - bottom_height - margin),
+        )
+
+        viewport_x = left_rect.right + gap
+        viewport_y = panel_top
+
+        viewport_right = right_rect.left - gap
+        viewport_bottom = screen_height - bottom_height - margin
+
+        viewport_width = max(120, viewport_right - viewport_x)
+        viewport_height = max(120, viewport_bottom - viewport_y)
+
+        viewport = pygame.Rect(
+            viewport_x,
+            viewport_y,
+            viewport_width,
+            viewport_height,
+        )
+
+        self.left_panel_rect = left_rect
+        self.right_panel_rect = right_rect
+
+        if self.camera is not None:
+            self.camera.set_viewport(viewport)
+
+        if self.event_panel is None:
+            self.event_panel = EventPanel(
+                right_rect,
+                self.theme_manager,
+            )
+        else:
+            self.event_panel.set_rect(right_rect)
+
+        controls_rect = pygame.Rect(
+            viewport.x,
+            screen_height - bottom_height + 5,
+            viewport.width,
+            bottom_height - 5,
+        )
+
+        if self.controller is not None:
+            if self.simulation_controls is None:
+                self.simulation_controls = SimulationControls(
+                    controls_rect,
+                    self.controller,
+                    self.theme_manager,
+                )
+            else:
+                self.simulation_controls.set_rect(controls_rect)
+
     def handle_event(self, event):
 
         if event.type == pygame.KEYDOWN:
@@ -163,6 +254,7 @@ class SimulationScene(BaseScene):
 
             elif event.key == pygame.K_PERIOD:
                 self.controller.step()
+                self._process_action_events()
 
             elif event.key == pygame.K_RIGHTBRACKET:
                 self.controller.increase_speed()
@@ -173,28 +265,43 @@ class SimulationScene(BaseScene):
             elif event.key == pygame.K_g:
                 self.world_renderer.toggle_grid()
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+            return
 
-            if self.camera is None:
+        # Los controles del HUD reciben primero los eventos.
+        if self.simulation_controls is not None:
+            if self.simulation_controls.handle_event(event):
                 return
 
+        if self.event_panel is not None:
+            self.event_panel.handle_event(event)
+
+        if self.camera is None:
+            return
+
+        # Interacciones con el mapa.
+        if event.type == pygame.MOUSEBUTTONDOWN:
+
             if event.button == 1:
-                self.selection.handle_click(
-                    world=self.world,
-                    camera=self.camera,
-                    mouse_position=event.pos,
-                    shift=bool(event.mod & pygame.KMOD_SHIFT),
-                )
+                if self.camera.viewport.collidepoint(event.pos):
+                    self.selection.handle_click(
+                        world=self.world,
+                        camera=self.camera,
+                        mouse_position=event.pos,
+                        shift=bool(getattr(event, "mod", 0) & pygame.KMOD_SHIFT),
+                    )
 
             elif event.button == 2:
-                self.dragging = True
-                self.last_mouse_position = event.pos
+                if self.camera.viewport.collidepoint(event.pos):
+                    self.dragging = True
+                    self.last_mouse_position = event.pos
 
             elif event.button == 4:
-                self.camera.zoom_in(event.pos)
+                if self.camera.viewport.collidepoint(event.pos):
+                    self.camera.zoom_in(event.pos)
 
             elif event.button == 5:
-                self.camera.zoom_out(event.pos)
+                if self.camera.viewport.collidepoint(event.pos):
+                    self.camera.zoom_out(event.pos)
 
         elif event.type == pygame.MOUSEBUTTONUP:
 
@@ -207,18 +314,28 @@ class SimulationScene(BaseScene):
             if self.dragging and self.camera is not None:
                 current_position = event.pos
 
-                dx = current_position[0] - self.last_mouse_position[0]
-                dy = current_position[1] - self.last_mouse_position[1]
+                dx = (
+                    current_position[0]
+                    - self.last_mouse_position[0]
+                )
+
+                dy = (
+                    current_position[1]
+                    - self.last_mouse_position[1]
+                )
 
                 self.camera.pan(dx, dy)
-
                 self.last_mouse_position = current_position
 
         elif event.type == pygame.MOUSEWHEEL:
 
-            if self.camera is not None:
-                mouse_position = pygame.mouse.get_pos()
+            mouse_position = getattr(
+                event,
+                "pos",
+                pygame.mouse.get_pos(),
+            )
 
+            if self.camera.viewport.collidepoint(mouse_position):
                 if event.y > 0:
                     self.camera.zoom_in(mouse_position)
 
@@ -226,30 +343,33 @@ class SimulationScene(BaseScene):
                     self.camera.zoom_out(mouse_position)
 
         elif event.type == pygame.VIDEORESIZE:
+            self._update_layout()
 
-            if self.camera is not None:
-                width, height = event.size
+    def _process_action_events(self):
+        """Procesa los eventos nuevos del motor para las animaciones."""
 
-                viewport = pygame.Rect(
-                    40,
-                    90,
-                    width - 80,
-                    height - 150,
-                )
-
-                self.camera.set_viewport(viewport)
+        if self.event_adapter is not None:
+            self.event_adapter.process_new_events()
 
     def update(self, delta_time):
+        """Actualiza simulación, acontecimientos y animaciones."""
 
         if self.controller is not None:
             self.controller.update(delta_time)
 
-        if self.camera is not None:
-            self.creature_renderer.update(delta_time)
+        self._process_action_events()
+
+        self.creature_renderer.update(delta_time)
+
+        if self.event_panel is not None and self.simulation is not None:
+            self.event_panel.set_events(
+                self.simulation.event_log.events
+            )
 
     def draw(self, screen):
 
-        screen.fill((17, 22, 41))
+        colors = self.theme_manager.colors
+        screen.fill(colors["background"])
 
         if self.error_message is not None:
             self._draw_error(screen)
@@ -258,8 +378,8 @@ class SimulationScene(BaseScene):
         if self.world is None:
             return
 
+        # Mundo y criaturas.
         self.world_renderer.draw(screen)
-
         self._draw_creatures(screen)
 
         self.selection.draw(
@@ -267,10 +387,11 @@ class SimulationScene(BaseScene):
             self.camera,
         )
 
+        # HUD.
         self._draw_interface(screen)
 
     def _draw_creatures(self, screen):
-        """Dibuja las criaturas existentes en las casillas visibles."""
+        """Dibuja criaturas vivas y animaciones de muerte."""
 
         start_x, start_y, end_x, end_y = (
             self.camera.get_visible_tiles()
@@ -290,75 +411,63 @@ class SimulationScene(BaseScene):
                     self.camera,
                 )
 
+        self.creature_renderer.draw_death_animations(
+            screen,
+            self.camera,
+        )
+
     def _draw_interface(self, screen):
-        """Dibuja información básica de la simulación."""
+        """Dibuja todos los componentes del HUD."""
 
-        title = self.title_font.render(
-            f"INSTINCT | {self.map_name}",
-            True,
-            (212, 174, 98),
-        )
+        colors = self.theme_manager.colors
 
-        screen.blit(title, (40, 25))
-
+        # Barra superior.
         if self.controller is not None:
-
-            status = (
-                "PAUSADA"
-                if self.controller.paused
-                else "EN EJECUCIÓN"
+            self.top_bar.draw(
+                screen,
+                self.map_name,
+                self.controller.tick,
+                self.controller.paused,
+                self.controller.speed,
             )
 
-            info = (
-                f"Tick: {self.controller.tick}  |  "
-                f"Estado: {status}  |  "
-                f"Velocidad: {self.controller.speed}x"
-            )
-
-            info_surface = self.info_font.render(
-                info,
-                True,
-                (242, 239, 250),
-            )
-
-            screen.blit(
-                info_surface,
-                (40, 65),
-            )
-
-        controls = (
-            "ESPACIO: Pausar/Reanudar | "
-            ".: Avanzar tick | "
-            "G: Cuadrícula | "
-            "[ / ]: Velocidad | "
-            "Rueda: Zoom | "
-            "Botón central: Mover cámara | "
-            "ESC: Menú"
+        # Panel de criatura seleccionada.
+        selected_creatures = (
+            self.selection.get_selected_creatures()
         )
 
-        controls_surface = self.info_font.render(
-            controls,
-            True,
-            (170, 166, 190),
+        self.creature_panel.draw(
+            screen,
+            self.left_panel_rect,
+            selected_creatures,
+            colors,
         )
 
-        screen.blit(
-            controls_surface,
-            (40, screen.get_height() - 35),
-        )
+        # Registro de acontecimientos.
+        if self.event_panel is not None:
+            self.event_panel.draw(screen)
+
+        # Controles de simulación.
+        if self.simulation_controls is not None:
+            self.simulation_controls.draw(screen)
 
     def _draw_error(self, screen):
 
-        title = self.title_font.render(
+        colors = self.theme_manager.colors
+
+        title_font = pygame.font.Font(None, 42)
+        info_font = pygame.font.Font(None, 28)
+
+        title = title_font.render(
             "No se pudo iniciar el mundo",
             True,
-            (212, 174, 98),
+            colors["gold"],
         )
 
-        message = self.info_font.render(
+        message = info_font.render(
             self.error_message,
             True,
-            (242, 239, 250),
+            colors["text"],
         )
 
         screen.blit(
@@ -375,10 +484,10 @@ class SimulationScene(BaseScene):
             ),
         )
 
-        hint = self.info_font.render(
+        hint = info_font.render(
             "Pulsa ESC para volver al menú",
             True,
-            (170, 166, 190),
+            colors["secondary_text"],
         )
 
         screen.blit(

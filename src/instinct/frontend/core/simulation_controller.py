@@ -1,4 +1,3 @@
-
 class SimulationController:
     """Controla la ejecución de una simulación desde el frontend."""
 

@@ -1,49 +1,62 @@
-
 import pygame
+
+from instinct.frontend.animation.animation_state import AnimationState
+from instinct.frontend.animation.animation_controller import AnimationController
 
 
 class CreatureRenderer:
-    """Representa y anima las criaturas del mundo."""
+    """Carga spritesheets y dibuja criaturas usando estados visuales por instancia."""
 
     FRAME_WIDTH = 64
     FRAME_HEIGHT = 64
-    DEFAULT_FRAME_DURATION = 150
 
-    def __init__(self, asset_loader, scale=1):
+    def __init__(self, asset_loader, scale=1, animation_controller=None):
         self.asset_loader = asset_loader
         self.scale = scale
-
-        # Spritesheets cargados por criatura y animación.
+        self.animation_controller = (
+            animation_controller or AnimationController()
+        )
         self.spritesheets = {}
-
-        # Estado de cada animación.
-        self.animations = {}
-
-        # Animación seleccionada para cada tipo de criatura.
-        self.active_animations = {}
 
     def load_animation(
         self,
         creature_name,
         animation_name="idle",
-        frame_count=4,
-        frame_duration=DEFAULT_FRAME_DURATION,
+        frame_count=None,
+        frame_duration=None,
     ):
-        """Carga una animación de una criatura."""
+        """Carga una spritesheet; los parámetros opcionales permiten compatibilidad."""
+
+        state = (
+            animation_name
+            if isinstance(animation_name, AnimationState)
+            else AnimationState(animation_name.lower())
+        )
+
+        definition = self.animation_controller.config.get(
+            creature_name,
+            state,
+        )
+
+        if frame_count is None:
+            frame_count = definition.frame_count
+
+        if frame_duration is None:
+            frame_duration = definition.frame_duration
 
         if frame_count <= 0 or frame_duration <= 0:
             raise ValueError(
                 "La cantidad de fotogramas y su duración deben ser positivas."
             )
 
-        key = (creature_name.lower(), animation_name.lower())
+        key = (creature_name.lower(), state.value)
 
         if key in self.spritesheets:
             return self.spritesheets[key]
 
         path = (
             f"creatures/sprites/{creature_name.lower()}/"
-            f"{animation_name.lower()}.png"
+            f"{(definition.filename or state.value).lower()}.png"
         )
 
         frames = self.asset_loader.load_sprite_sheet(
@@ -57,122 +70,112 @@ class CreatureRenderer:
             self.spritesheets[key] = None
             return None
 
-        frames = frames[:frame_count]
-
         self.spritesheets[key] = {
-            "frames": frames,
+            "frames": frames[:frame_count],
             "duration": frame_duration,
-        }
-
-        self.animations[key] = {
-            "frame": 0,
-            "elapsed": 0,
         }
 
         return self.spritesheets[key]
 
-    def set_animation(
-        self,
-        creature_name,
-        animation_name,
-        frame_count=4,
-        frame_duration=DEFAULT_FRAME_DURATION,
-    ):
-        """Cambia la animación activa de una criatura."""
-
-        creature_key = creature_name.lower()
-        animation_name = animation_name.lower()
-
-        sheet = self.load_animation(
-            creature_name,
-            animation_name,
-            frame_count,
-            frame_duration,
-        )
-
-        if sheet is None:
-            return False
-
-        animation_key = (creature_key, animation_name)
-
-        # Reiniciar la animación desde el primer fotograma.
-        self.animations[animation_key] = {
-            "frame": 0,
-            "elapsed": 0,
-        }
-
-        self.active_animations[creature_key] = animation_name
-
-        return True
-
     def update(self, delta_time):
-        """Actualiza los fotogramas de las animaciones activas."""
+        """Actualiza los fotogramas y desplazamientos visuales."""
 
-        delta_ms = delta_time * 1000
-
-        for creature_name, animation_name in self.active_animations.items():
-            key = (creature_name, animation_name)
-            sheet = self.spritesheets.get(key)
-
-            if sheet is None:
-                continue
-
-            frames = sheet["frames"]
-
-            if len(frames) <= 1:
-                continue
-
-            animation = self.animations[key]
-            animation["elapsed"] += delta_ms
-
-            while animation["elapsed"] >= sheet["duration"]:
-                animation["elapsed"] -= sheet["duration"]
-                animation["frame"] = (
-                    animation["frame"] + 1
-                ) % len(frames)
+        self.animation_controller.update(delta_time)
 
     def draw_creature(self, screen, creature, camera):
-        """Dibuja una criatura animada en el mundo."""
+        """Dibuja una criatura en su posición visual actual."""
 
         if creature is None:
             return
 
-        creature_key = creature.name.lower()
+        state = self.animation_controller.get_state(creature)
 
-        # Si no tiene una animación seleccionada, usar idle.
-        if creature_key not in self.active_animations:
-            self.set_animation(creature.name, "idle")
-
-        animation_name = self.active_animations.get(
-            creature_key,
-            "idle",
+        self._draw_with_state(
+            screen,
+            creature,
+            camera,
+            state,
         )
 
-        animation_key = (creature_key, animation_name)
-        sheet = self.spritesheets.get(animation_key)
+    def draw_death_animations(self, screen, camera):
+        """Dibuja criaturas retiradas del mundo que aún están muriendo."""
 
-        if sheet is None:
-            self._draw_placeholder(screen, creature, camera)
+        completed = []
+
+        for creature, frame_index, finished in (
+            self.animation_controller.iter_death_animations()
+        ):
+            self._draw_with_state(
+                screen,
+                creature,
+                camera,
+                AnimationState.DEATH,
+                frame_index=frame_index,
+            )
+
+            if finished:
+                completed.append(creature)
+
+        for creature in completed:
+            self.animation_controller.remove_creature(creature)
+
+    def _draw_with_state(
+        self,
+        screen,
+        creature,
+        camera,
+        state,
+        frame_index=None,
+    ):
+        """Dibuja una criatura usando su estado y posición visual."""
+
+        sheet = self.load_animation(
+            creature.name,
+            state,
+        )
+
+        if sheet is None or not sheet["frames"]:
+            self._draw_placeholder(
+                screen,
+                creature,
+                camera,
+            )
             return
+
+        if frame_index is None:
+            frame_index = self.animation_controller.get_frame(
+                creature
+            )
 
         frames = sheet["frames"]
 
-        if not frames:
-            self._draw_placeholder(screen, creature, camera)
-            return
+        frame = frames[
+            min(frame_index, len(frames) - 1)
+        ]
 
-        animation = self.animations[animation_key]
-        frame = frames[animation["frame"]]
+        size = max(
+            1,
+            int(self.FRAME_WIDTH * camera.zoom),
+        )
 
-        size = int(self.FRAME_WIDTH * camera.zoom)
+        scaled_frame = pygame.transform.scale(
+            frame,
+            (size, size),
+        )
+
+        visual_x, visual_y = (
+            self.animation_controller.get_visual_position(
+                creature
+            )
+        )
 
         tile_center_x = (
-            creature.x * camera.tile_size
+            visual_x * camera.tile_size
             + camera.tile_size / 2
         )
 
         tile_center_y = (
-            creature.y * camera.tile_size
+            visual_y * camera.tile_size
             + camera.tile_size / 2
         )
 
@@ -181,33 +184,51 @@ class CreatureRenderer:
             tile_center_y,
         )
 
-        scaled_frame = pygame.transform.scale(
-            frame,
-            (size, size),
-        )
-
         rect = scaled_frame.get_rect(
-            center=(int(screen_x), int(screen_y))
+            center=(
+                int(screen_x),
+                int(screen_y),
+            )
         )
 
-        screen.blit(scaled_frame, rect)
+        screen.blit(
+            scaled_frame,
+            rect,
+        )
 
     def _draw_placeholder(self, screen, creature, camera):
-        """Dibuja un marcador si no existe la spritesheet."""
+        """Dibuja un marcador cuando no existe la spritesheet."""
 
-        center_x = (creature.x + 0.5) * camera.tile_size
-        center_y = (creature.y + 0.5) * camera.tile_size
+        visual_x, visual_y = (
+            self.animation_controller.get_visual_position(
+                creature
+            )
+        )
+
+        center_x = (
+            visual_x + 0.5
+        ) * camera.tile_size
+
+        center_y = (
+            visual_y + 0.5
+        ) * camera.tile_size
 
         screen_x, screen_y = camera.world_to_screen(
             center_x,
             center_y,
         )
 
-        radius = max(3, int(camera.zoom * 6))
+        radius = max(
+            3,
+            int(camera.zoom * 6),
+        )
 
         pygame.draw.circle(
             screen,
             (212, 174, 98),
-            (int(screen_x), int(screen_y)),
+            (
+                int(screen_x),
+                int(screen_y),
+            ),
             radius,
         )

@@ -1,4 +1,3 @@
-
 import pygame
 
 from instinct.frontend.settings import (

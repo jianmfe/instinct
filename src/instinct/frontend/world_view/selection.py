@@ -1,4 +1,3 @@
-
 import pygame
 
 
@@ -89,7 +88,7 @@ class Selection:
                 screen,
                 self.TILE_COLOR,
                 rect,
-                max(1, camera.zoom),
+                max(1, round(camera.zoom)),
             )
 
         # Resaltar las criaturas seleccionadas.
@@ -109,7 +108,7 @@ class Selection:
                 self.CREATURE_COLOR,
                 (screen_x, screen_y),
                 radius,
-                max(1, camera.zoom),
+                max(1, round(camera.zoom)),
             )
 
         screen.set_clip(previous_clip)

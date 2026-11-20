@@ -1,6 +1,4 @@
-
-# Naruto Uzumaki
-
+# Naruto - script de prueba de animaciones
 creature Naruto
 faction konoha
 health 100
@@ -8,5 +6,8 @@ vision 6
 lifespan 500
 
 start:
-    wait(1)
+    move(random % 3 - 1, random % 3 - 1, 2)
+    attack(0, 0, 1)
+    roar("Konoha!")
+    consume(0, 0, 1, 1)
     goto start

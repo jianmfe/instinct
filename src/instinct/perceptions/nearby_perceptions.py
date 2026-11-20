@@ -1,3 +1,4 @@
+
 from instinct.perceptions.base import PerceptionGroup
 from instinct.runtime.execution_context import ExecutionContext
 
@@ -36,12 +37,12 @@ class NearbyPerceptions(PerceptionGroup):
 
                 if other_creature is not None and other_creature is not creature:
                     if other_creature.faction == creature.faction:
-                        allies.append(other_creature)
+                        allies.append((other_creature.x, other_creature.y))
                     else:
-                        enemies.append(other_creature)
+                        enemies.append((other_creature.x, other_creature.y))
 
                 if tile.object is not None:
-                    objects.append(tile.object)
+                    objects.append((x, y))
 
         ally_dist, ally_dx, ally_dy = self._nearest_target(
             creature.x,
@@ -84,27 +85,27 @@ class NearbyPerceptions(PerceptionGroup):
     def _nearest_target(
         origin_x: int,
         origin_y: int,
-        targets: list,
+        targets: list[tuple[int, int]],
     ) -> tuple[int, int, int]:
         """Obtiene la distancia y dirección hacia el objetivo más cercano."""
 
         if not targets:
             return -1, 0, 0
 
-        nearest = min(
+        nearest_x, nearest_y = min(
             targets,
             key=lambda target: (
                 max(
-                    abs(target.x - origin_x),
-                    abs(target.y - origin_y),
+                    abs(target[0] - origin_x),
+                    abs(target[1] - origin_y),
                 ),
-                target.y,
-                target.x,
+                target[1],
+                target[0],
             ),
         )
 
-        dx = nearest.x - origin_x
-        dy = nearest.y - origin_y
+        dx = nearest_x - origin_x
+        dy = nearest_y - origin_y
 
         distance = max(abs(dx), abs(dy))
 
@@ -130,7 +131,6 @@ class NearbyPerceptions(PerceptionGroup):
             if event.category != "rugido":
                 continue
 
-            # Los rugidos nuevos deben guardar las coordenadas de emisión.
             if event.x is None or event.y is None:
                 continue
 
