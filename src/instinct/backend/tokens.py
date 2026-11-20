@@ -5,7 +5,7 @@ from typing import Any
 
 class TokenType(Enum):
     #LITERALES
-    NUMBER = (r'\d+(\.\d+)?', False)
+    NUMBER = (r'\d+', False)
     STRING = (r'"([^"\n]*)"', False)
     IDENTIFIER = (r'[a-zA-Z_][a-zA-Z0-9_]*', False)
 
@@ -43,7 +43,6 @@ class TokenType(Enum):
     COLON = (r':', False)
     NEWLINE = (r'\n+', False)
     WHITESPACE = (r'[ \t]+', False)
-    EOF = (r'$', False)
     MISMATCH = (r'.', False)
 
     def __init__(self, pattern: str, is_keyword: bool):

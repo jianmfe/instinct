@@ -1,11 +1,16 @@
+
 import os
+
 from .lexer import Lexer
 from .parser import Parser
 from .semantic import SemanticAnalyzer
 
+
 def compile_file(filepath: str):
     if not os.path.exists(filepath):
-        print(f"[!] archivo de script no encontrado: {filepath}")
+        raise FileNotFoundError(
+            f"No se encontró el archivo de script: {filepath}."
+        )
 
     with open(filepath, 'r', encoding='utf-8') as f:
         code = f.read()

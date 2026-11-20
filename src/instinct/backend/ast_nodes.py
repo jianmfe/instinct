@@ -61,12 +61,23 @@ class StringNode(ASTNode):
 
 @dataclass
 class IdentifierNode(ASTNode):
-    name : str
+    name: str
 
     def evaluate(self, memory):
+        missing = object()
+
         if isinstance(memory, dict):
-            return memory.get(self.name, 0)
-        return getattr(memory, self.name, 0)
+            value = memory.get(self.name, missing)
+        else:
+            value = getattr(memory, self.name, missing)
+
+        if value is missing:
+            raise RuntimeError(
+                f"Error en la linea {self.lineno}: "
+                f"La variable '{self.name}' no ha sido inicializada."
+            )
+
+        return value
 
 @dataclass
 class FunctionCallNode(ASTNode):
@@ -83,67 +94,122 @@ class FunctionCallNode(ASTNode):
 
 @dataclass
 class BinaryOpNode(ASTNode):
-    left : ASTNode
-    op : str
-    right : ASTNode
+    left: ASTNode
+    op: str
+    right: ASTNode
 
     def evaluate(self, memory):
         left_val = self.left.evaluate(memory)
+
+        # Los operadores logicos aceptan cualquier tipo
+        # y utilizan cortocircuito.
+        if self.op == 'and':
+            if not left_val:
+                return 0
+
+            return 1 if self.right.evaluate(memory) else 0
+
+        if self.op == 'or':
+            if left_val:
+                return 1
+
+            return 1 if self.right.evaluate(memory) else 0
+
         right_val = self.right.evaluate(memory)
+
+        # Todos los operadores no logicos exigen
+        # operandos del mismo tipo.
+        if type(left_val) is not type(right_val):
+            raise RuntimeError(
+                f"Error en la linea {self.lineno}: "
+                f"Los operandos de '{self.op}' deben ser del mismo tipo."
+            )
+
+        # Igualdad y desigualdad admiten enteros y textos.
+        if self.op in ('==', '!='):
+            if type(left_val) not in (int, str):
+                raise RuntimeError(
+                    f"Error en la linea {self.lineno}: "
+                    f"Tipo de dato no valido para '{self.op}'."
+                )
+
+            if self.op == '==':
+                return 1 if left_val == right_val else 0
+
+            return 1 if left_val != right_val else 0
+
+        # A partir de aqui, todos los operadores
+        # requieren numeros enteros.
+        if type(left_val) is not int:
+            raise RuntimeError(
+                f"Error en la linea {self.lineno}: "
+                f"El operador '{self.op}' requiere operandos numericos."
+            )
 
         if self.op == '+':
             return left_val + right_val
+
         elif self.op == '-':
             return left_val - right_val
+
         elif self.op == '*':
             return left_val * right_val
+
         elif self.op == '/':
             if right_val == 0:
-                raise RuntimeError("Error en tiempo de ejecucion: Division por cero")
+                raise RuntimeError(
+                    f"Error en la linea {self.lineno}: Division por cero."
+                )
             return left_val // right_val
+
         elif self.op == '%':
             if right_val == 0:
-                raise RuntimeError("Error en tiempo de ejecucion: Modulo por cero")
+                raise RuntimeError(
+                    f"Error en la linea {self.lineno}: Modulo por cero."
+                )
             return left_val % right_val
+
         elif self.op == '<':
             return 1 if left_val < right_val else 0
+
         elif self.op == '>':
             return 1 if left_val > right_val else 0
+
         elif self.op == '<=':
             return 1 if left_val <= right_val else 0
+
         elif self.op == '>=':
             return 1 if left_val >= right_val else 0
-        elif self.op == '==':
-            return 1 if left_val == right_val else 0
-        elif self.op == '!=':
-            return 1 if left_val != right_val else 0
-        elif self.op == 'and':
-            if not left_val:
-                return False
-            return bool(self.right.evaluate(memory))
-        elif self.op == 'or':
-            if not left_val:
-                return True
-            return bool(self.right.evaluate(memory))
 
-        else:
-            raise RuntimeError(f"Operador binario desconocido: {self.op}")
+        raise RuntimeError(
+            f"Error en la linea {self.lineno}: "
+            f"Operador binario desconocido '{self.op}'."
+        )
 
 @dataclass
 class UnaryOpNode(ASTNode):
-    op : str
-    operand : ASTNode
+    op: str
+    operand: ASTNode
 
     def evaluate(self, memory):
         val = self.operand.evaluate(memory)
 
         if self.op == '-':
+            if type(val) is not int:
+                raise RuntimeError(
+                    f"Error en la linea {self.lineno}: "
+                    "El menos unario requiere un numero entero."
+                )
+
             return -val
+
         elif self.op in ('not', '!'):
             return 0 if val else 1
-        else:
-            raise RuntimeError(f"Operador unario desconocido {self.op}")
 
+        raise RuntimeError(
+            f"Error en la linea {self.lineno}: "
+            f"Operador unario desconocido '{self.op}'."
+        )
 
 def dump_ast(node, indent=0):
     pad = " " * indent
