@@ -4,7 +4,7 @@
 
 El proyecto combina un compilador desarrollado desde cero, un entorno de ejecución, un motor de simulación por turnos y una interfaz gráfica construida con **Python y Pygame CE**.
 
-> **Estado del proyecto:** en desarrollo. El compilador, el runtime, el motor de simulación y una parte importante de la interfaz ya están implementados. La integración, las pruebas y la expansión de funcionalidades continúan en progreso.
+> **Estado del proyecto:** en desarrollo activo. El compilador, el runtime y el motor de simulación están implementados. La aplicación gráfica ya integra mundo, criaturas, animaciones, cámara y HUD; la auditoría de integración visual está identificando los últimos ajustes pendientes.
 
 ## Contenido
 
@@ -14,31 +14,31 @@ El proyecto combina un compilador desarrollado desde cero, un entorno de ejecuci
 - [Instalación](#instalación)
 - [Ejecución](#ejecución)
 - [Recursos del mundo](#recursos-del-mundo)
-- [Pruebas](#pruebas)
+- [Pruebas y calidad](#pruebas-y-calidad)
 - [Documentación y seguimiento](#documentación-y-seguimiento)
 
 ## Características
 
 ### Lenguaje Instinct
 - Lenguaje DSL propio para definir el comportamiento de las criaturas.
-- Análisis léxico, sintáctico y semántico mediante componentes desarrollados para el proyecto.
-- Generación y evaluación de un árbol de sintaxis abstracta (AST).
+- Análisis léxico, sintáctico y semántico.
+- Construcción y evaluación de un árbol de sintaxis abstracta (AST).
 - Ejecución de instrucciones, condiciones, funciones y acciones mediante el runtime.
 
 ### Motor de simulación
 - Mundo basado en una cuadrícula de casillas.
 - Entidades diferenciadas: criaturas, terrenos y objetos.
 - Sistema de acciones y percepciones para interactuar con el entorno.
-- Simulación organizada en ticks.
-- Gestión de eventos producidos durante la ejecución.
-- Aplicación de reglas naturales del mundo.
+- Simulación organizada en ticks y orden de ejecución administrado por turnos.
+- Registro de eventos y aplicación de reglas naturales del mundo.
 
 ### Interfaz gráfica
 - Aplicación gráfica desarrollada con Pygame CE.
 - Menú principal y escena de simulación.
 - Renderizado de terrenos, objetos y criaturas.
-- Cámara con desplazamiento y zoom.
-- Animaciones visuales vinculadas a los eventos y acciones de las criaturas.
+- Cámara con zoom, desplazamiento y seguimiento de criatura seleccionada.
+- Interpolación visual de movimiento vinculada a eventos del motor.
+- Máquina de estados de animación independiente por criatura.
 - Paneles de información, controles de simulación y registro de eventos.
 
 La interfaz representa visualmente el estado del motor; la lógica de comportamiento y las reglas de simulación pertenecen al núcleo del proyecto.
@@ -68,7 +68,7 @@ instinct/
 │       ├── perceptions/ # Sensores y percepciones del entorno
 │       ├── runtime/     # Entorno de ejecución e intérprete
 │       ├── world/       # Entidades, casillas y cuadrícula
-│       └── main.py      # Punto de entrada del paquete
+│       └── main.py      # Punto de entrada compatible
 ├── tests/               # Pruebas automatizadas
 ├── pyproject.toml       # Configuración y dependencias
 ├── uv.lock
@@ -94,10 +94,10 @@ instinct/
 - **Pygame CE** para la interfaz gráfica.
 - **uv** para la gestión del entorno y las dependencias.
 - **pytest** para las pruebas automatizadas.
+- **Ruff** para linting.
+- **Mypy** para comprobación estática de tipos.
 
 ## Instalación
-
-### Requisitos previos
 
 Instala Python 3.13 o una versión compatible y [uv](https://docs.astral.sh/uv/).
 
@@ -108,7 +108,7 @@ git clone https://github.com/luisiafk/instinct.git
 cd instinct
 ```
 
-Crea y sincroniza el entorno del proyecto:
+Crea y sincroniza el entorno:
 
 ```bash
 uv sync
@@ -116,11 +116,19 @@ uv sync
 
 ## Ejecución
 
-Inicia la aplicación gráfica desde la raíz del repositorio:
+Desde la raíz del repositorio, cualquiera de estos comandos inicia la aplicación:
 
 ```bash
 uv run python -m instinct.frontend.app
 ```
+
+También está disponible el comando instalado por el proyecto:
+
+```bash
+uv run instinct
+```
+
+Ambas formas de arranque fueron comprobadas y conducen al menú principal de la aplicación.
 
 ## Recursos del mundo
 
@@ -162,28 +170,34 @@ Las criaturas se incorporan a la simulación por separado; no forman parte de la
 
 Los nombres, campos y caracteres de los recursos deben respetar las definiciones y validaciones del cargador correspondiente.
 
-## Pruebas
+## Pruebas y calidad
 
-Ejecuta la suite disponible con:
-
-```bash
-uv run pytest
-```
-
-Para ejecutar específicamente las pruebas del compilador:
+Ejecuta la suite completa:
 
 ```bash
-uv run pytest tests/backend/test_compiler.py -v
+uv run pytest -q
 ```
 
-La cobertura de pruebas continúa en desarrollo. Que una prueba individual pase no implica que todos los módulos o los flujos completos de la aplicación estén validados.
+Ejecuta Ruff:
+
+```bash
+uv run ruff check src tests
+```
+
+Ejecuta Mypy:
+
+```bash
+uv run mypy src
+```
+
+**Última verificación comunicada:** 30 pruebas aprobadas, Ruff sin errores y Mypy sin errores en 107 archivos fuente. Estos resultados corresponden a la última ejecución reportada durante el desarrollo; conviene repetir los tres comandos después de nuevos cambios.
 
 ## Documentación y seguimiento
 
-- **[Seguimiento del desarrollo](docs/PROGRESS.md):** funcionalidades completadas, trabajo en curso, pendientes y verificaciones.
+- **[Seguimiento del desarrollo](docs/PROGRESS.md):** funcionalidades completadas, auditorías, hallazgos y tareas pendientes.
 - **[Documento de orientación](docs/instinct.pdf):** referencia general del proyecto.
 
-El tracker es el documento de referencia para actualizar el estado del desarrollo. Este README debe mantenerse centrado en explicar el proyecto y cómo utilizarlo.
+El tracker es el documento de referencia para el estado técnico y el orden de trabajo. Este README se centra en explicar el proyecto, su arquitectura y cómo ejecutarlo.
 
 ---
 
