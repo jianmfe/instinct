@@ -3,7 +3,7 @@ import pygame
 
 
 class Dropdown:
-    """Lista desplegable de opciones."""
+    """Lista desplegable de opciones que se abre hacia arriba."""
 
     def __init__(
         self,
@@ -32,6 +32,18 @@ class Dropdown:
         self.opened = False
         self.option_height = self.rect.height
 
+    def _get_option_rect(self, index):
+        """Obtiene el rectángulo de una opción encima del botón."""
+
+        total_height = len(self.options) * self.option_height
+
+        return pygame.Rect(
+            self.rect.x,
+            self.rect.y - total_height + index * self.option_height,
+            self.rect.width,
+            self.option_height,
+        )
+
     def handle_event(self, event):
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return
@@ -42,12 +54,7 @@ class Dropdown:
 
         if self.opened:
             for index, option in enumerate(self.options):
-                option_rect = pygame.Rect(
-                    self.rect.x,
-                    self.rect.bottom + index * self.option_height,
-                    self.rect.width,
-                    self.option_height,
-                )
+                option_rect = self._get_option_rect(index)
 
                 if option_rect.collidepoint(event.pos):
                     self.selected = option
@@ -61,6 +68,35 @@ class Dropdown:
             self.opened = False
 
     def draw(self, surface):
+        # Dibujar las opciones primero para que el botón quede encima.
+        if self.opened:
+            for index, option in enumerate(self.options):
+                option_rect = self._get_option_rect(index)
+
+                pygame.draw.rect(
+                    surface,
+                    self.background,
+                    option_rect,
+                )
+
+                pygame.draw.rect(
+                    surface,
+                    self.accent,
+                    option_rect,
+                    width=1,
+                )
+
+                text = self.font.render(
+                    str(option),
+                    True,
+                    self.text_color,
+                )
+
+                surface.blit(
+                    text,
+                    (option_rect.x + 10, option_rect.y + 8),
+                )
+
         pygame.draw.rect(
             surface,
             self.background,
@@ -86,36 +122,3 @@ class Dropdown:
             label,
             (self.rect.x + 10, self.rect.y + 8),
         )
-
-        if self.opened:
-            for index, option in enumerate(self.options):
-                option_rect = pygame.Rect(
-                    self.rect.x,
-                    self.rect.bottom + index * self.option_height,
-                    self.rect.width,
-                    self.option_height,
-                )
-
-                pygame.draw.rect(
-                    surface,
-                    self.background,
-                    option_rect,
-                )
-
-                pygame.draw.rect(
-                    surface,
-                    self.accent,
-                    option_rect,
-                    width=1,
-                )
-
-                text = self.font.render(
-                    str(option),
-                    True,
-                    self.text_color,
-                )
-
-                surface.blit(
-                    text,
-                    (option_rect.x + 10, option_rect.y + 8),
-                )

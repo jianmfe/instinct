@@ -169,23 +169,19 @@ class CreatureRenderer:
             )
         )
 
-        tile_center_x = (
-            visual_x * camera.tile_size
-            + camera.tile_size / 2
-        )
-
-        tile_center_y = (
-            visual_y * camera.tile_size
-            + camera.tile_size / 2
-        )
+        tile_left = visual_x * camera.tile_size
+        
+        tile_bottom = (
+            visual_y + 1
+        ) * camera.tile_size
 
         screen_x, screen_y = camera.world_to_screen(
-            tile_center_x,
-            tile_center_y,
+            tile_left + camera.tile_size / 2,
+            tile_bottom,
         )
 
         rect = scaled_frame.get_rect(
-            center=(
+            midbottom=(
                 int(screen_x),
                 int(screen_y),
             )

@@ -1,0 +1,3 @@
+object Shaka
+char S
+resource_max 100

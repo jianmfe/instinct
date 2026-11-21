@@ -23,6 +23,15 @@ class SimulationController:
 
         return self.simulation.tick
 
+    @property
+    def finished(self):
+        """Indica si la simulación ha terminado."""
+
+        return (
+            self.simulation is None
+            or self.simulation.is_finished
+        )
+
     def set_simulation(self, simulation):
         """Asigna una simulación al controlador."""
 
@@ -31,15 +40,19 @@ class SimulationController:
         self.paused = True
 
     def play(self):
-        """Reanuda la simulación."""
+        """Reanuda la simulación si todavía quedan criaturas."""
 
-        if self.simulation is not None:
-            self.paused = False
+        if self.finished:
+            self.pause()
+            return
+
+        self.paused = False
 
     def pause(self):
         """Pausa la simulación."""
 
         self.paused = True
+        self.accumulated_time = 0.0
 
     def toggle_pause(self):
         """Alterna entre pausa y ejecución."""
@@ -75,16 +88,24 @@ class SimulationController:
     def step(self):
         """Ejecuta exactamente un tick manual."""
 
-        if self.simulation is None:
+        if self.finished:
+            self.pause()
             return
 
         self.simulation.run_tick()
         self.accumulated_time = 0.0
 
+        if self.finished:
+            self.pause()
+
     def update(self, delta_time):
         """Actualiza la simulación según el tiempo transcurrido."""
 
         if self.paused or self.simulation is None:
+            return
+
+        if self.finished:
+            self.pause()
             return
 
         if self.ticks_per_second <= 0:
@@ -99,3 +120,7 @@ class SimulationController:
         while self.accumulated_time >= tick_interval:
             self.simulation.run_tick()
             self.accumulated_time -= tick_interval
+
+            if self.finished:
+                self.pause()
+                break

@@ -152,6 +152,7 @@ class SimulationScene(BaseScene):
 
         print(f"Naruto colocado en ({x}, {y}).")
 
+
     def _update_layout(self):
         """Calcula las áreas del mapa y los paneles del HUD."""
 
@@ -173,20 +174,25 @@ class SimulationScene(BaseScene):
         panel_top = 92
         bottom_height = 94
 
+        # Los paneles laterales llegan hasta el margen inferior.
+        panel_height = screen_height - panel_top - margin
+
         left_rect = pygame.Rect(
             margin,
             panel_top,
             left_width,
-            max(120, screen_height - panel_top - bottom_height - margin),
+            panel_height,
         )
 
         right_rect = pygame.Rect(
             screen_width - margin - right_width,
             panel_top,
             right_width,
-            max(120, screen_height - panel_top - bottom_height - margin),
+            panel_height,
         )
 
+        # El espacio inferior se reserva solamente para los controles
+        # y el área central del mapa.
         viewport_x = left_rect.right + gap
         viewport_y = panel_top
 
@@ -351,8 +357,55 @@ class SimulationScene(BaseScene):
         if self.event_adapter is not None:
             self.event_adapter.process_new_events()
 
+
+    def _update_camera_follow(self):
+        """Centra la cámara en la última criatura seleccionada que siga viva."""
+
+        if self.camera is None or self.world is None:
+            return
+
+        selected = self.selection.get_selected_creatures()
+
+        if not selected:
+            return
+
+        # Identificar las criaturas que siguen presentes en el mundo.
+        living_creatures = {
+            id(tile.creature)
+            for row in self.world.tiles
+            for tile in row
+            if tile.creature is not None
+        }
+
+        # Seguir la última criatura seleccionada que siga viva.
+        target = next(
+            (
+                creature
+                for creature in reversed(selected)
+                if id(creature) in living_creatures
+            ),
+            None,
+        )
+
+        if target is None:
+            return
+
+        visual_x, visual_y = (
+            self.animation_controller.get_visual_position(target)
+        )
+
+        self.camera.x = (
+            visual_x + 0.5
+        ) * self.camera.tile_size
+
+        self.camera.y = (
+            visual_y + 0.5
+        ) * self.camera.tile_size
+
+
+
     def update(self, delta_time):
-        """Actualiza simulación, acontecimientos y animaciones."""
+        """Actualiza simulación, acontecimientos, animaciones y cámara."""
 
         if self.controller is not None:
             self.controller.update(delta_time)
@@ -361,10 +414,14 @@ class SimulationScene(BaseScene):
 
         self.creature_renderer.update(delta_time)
 
+        # Seguir la posición visual interpolada de la criatura.
+        self._update_camera_follow()
+
         if self.event_panel is not None and self.simulation is not None:
             self.event_panel.set_events(
                 self.simulation.event_log.events
             )
+
 
     def draw(self, screen):
 
