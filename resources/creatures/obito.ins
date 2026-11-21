@@ -1,0 +1,13 @@
+# Obito - script de prueba de animaciones
+creature Obito
+faction akatsuki
+health 110
+vision 6
+lifespan 600
+
+start:
+    move(random % 3 - 1, random % 3 - 1, 2)
+    attack(0, 0, 1)
+    roar("Obito!")
+    consume(0, 0, 1, 1)
+    goto start

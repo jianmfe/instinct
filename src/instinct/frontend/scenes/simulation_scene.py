@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pygame
+import random
 
 from instinct.frontend.scenes.base_scene import BaseScene
 from instinct.frontend.settings import DEFAULT_TILE_SIZE
@@ -109,6 +110,9 @@ class SimulationScene(BaseScene):
 
         self.world = world
         self._place_naruto()
+        self._place_sasuke()
+        self._place_madara()
+        self._place_obito()
 
         self.simulation = Simulation(self.world)
 
@@ -152,7 +156,43 @@ class SimulationScene(BaseScene):
 
         print(f"Naruto colocado en ({x}, {y}).")
 
+    def _place_creature_randomly(self, creature_name):
+        """Crea y coloca una criatura en una casilla libre aleatoria."""
 
+        creature = self.resource_manager.create_creature(creature_name)
+
+        if creature is None:
+            print(f"No se encontró la plantilla de {creature_name}.")
+            return
+
+        available_positions = [
+            (x, y)
+            for y in range(self.world.height)
+            for x in range(self.world.width)
+            if not self.world.get_tile(x, y).is_occupied
+        ]
+
+        if not available_positions:
+            print(f"No hay casillas libres para colocar a {creature_name}.")
+            return
+
+        x, y = random.choice(available_positions)
+
+        self.world.place_creature(creature, x, y)
+
+        print(f"{creature_name} colocado en ({x}, {y}).")
+
+    def _place_sasuke(self):
+        self._place_creature_randomly("Sasuke")
+
+
+    def _place_madara(self):
+        self._place_creature_randomly("Madara")
+
+
+    def _place_obito(self):
+        self._place_creature_randomly("Obito")
+    
     def _update_layout(self):
         """Calcula las áreas del mapa y los paneles del HUD."""
 

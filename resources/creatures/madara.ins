@@ -1,0 +1,13 @@
+# Madara - script de prueba de animaciones
+creature Madara
+faction uchiha
+health 140
+vision 5
+lifespan 700
+
+start:
+    move(random % 3 - 1, random % 3 - 1, 2)
+    attack(0, 0, 1)
+    roar("Madara!")
+    consume(0, 0, 1, 1)
+    goto start
