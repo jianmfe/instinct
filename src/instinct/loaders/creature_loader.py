@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from instinct.backend.compiler import compile_file
@@ -13,7 +12,7 @@ class CreatureLoader:
         path = Path(filepath)
 
         try:
-            ast = compile_file(path)
+            ast = compile_file(str(path))
         except FileNotFoundError as error:
             raise ValueError(
                 f"No se encontró el archivo de criatura: '{path}'."

@@ -41,9 +41,11 @@ class NaturalLaws:
             for tile in row:
                 terrain = tile.terrain
 
+                current_reserve = terrain.reserve or 0
+
                 terrain.reserve = min(
                     terrain.resource_max,
-                    terrain.reserve + terrain.regen,
+                    current_reserve + terrain.regen,
                 )
 
     @staticmethod

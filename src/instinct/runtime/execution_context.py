@@ -1,15 +1,13 @@
-
-from random import Random
 from collections.abc import Callable
-from typing import Any
+from random import Random
+from typing import Any, ClassVar
 
-from instinct.engine.event_log import EventLog
 from instinct.engine.action_event import ActionEventLog
+from instinct.engine.event_log import EventLog
 from instinct.runtime.environment import Environment
 from instinct.runtime.program import Program
 from instinct.world.entities import Creature
 from instinct.world.world_grid import WorldGrid
-
 
 Value = int | str
 
@@ -27,7 +25,7 @@ FunctionExecutor = Callable[
 class ExecutionContext:
     """Mantiene el estado de ejecución de una criatura."""
 
-    READ_ONLY_NAMES = {
+    READ_ONLY_NAMES: ClassVar[set[str]] = {
         "GROUND", "OBJECT", "ALLY", "ENEMY", "NONE",
         "creature", "faction", "species",
         "health", "vision", "lifespan", "age",
@@ -165,7 +163,7 @@ class ExecutionContext:
             return self.perception_registry.get(self, name)
 
         if self.environment.has_variable(name):
-            return self.environment.get(name)
+            return self.environment.get_variable(name)
 
         raise RuntimeError(
             f"Error de ejecución: la variable '{name}' no ha sido inicializada."
@@ -191,7 +189,7 @@ class ExecutionContext:
                 f"la percepción '{name}'."
             )
 
-        self.environment.set(name, value)
+        self.environment.set_variable(name, value)
 
     def call_function(self, name: str, args: list[Value]) -> Value:
         """Ejecuta una función del lenguaje."""

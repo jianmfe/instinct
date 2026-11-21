@@ -11,12 +11,11 @@ from instinct.perceptions.registry import PerceptionRegistry
 from instinct.perceptions.self_perceptions import SelfPerceptions
 from instinct.perceptions.world_perceptions import WorldPerceptions
 
-
 __all__ = [
+    "NearbyPerceptions",
     "PerceptionGroup",
+    "PerceptionRegistry",
     "PerceptionValue",
     "SelfPerceptions",
     "WorldPerceptions",
-    "NearbyPerceptions",
-    "PerceptionRegistry",
 ]

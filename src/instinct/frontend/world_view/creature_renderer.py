@@ -1,7 +1,7 @@
 import pygame
 
-from instinct.frontend.animation.animation_state import AnimationState
 from instinct.frontend.animation.animation_controller import AnimationController
+from instinct.frontend.animation.animation_state import AnimationState
 
 
 class CreatureRenderer:

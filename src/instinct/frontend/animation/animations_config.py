@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import ClassVar
 
 from instinct.frontend.animation.animation_state import AnimationState
 
@@ -61,7 +62,9 @@ class AnimationConfig:
     Las animaciones no declaradas utilizan la configuración predeterminada.
     """
 
-    _species_configs = {}
+    _species_configs: ClassVar[
+        dict[str, dict[AnimationState, AnimationDefinition]]
+    ] = {}
 
     @classmethod
     def register(cls, species_name, definitions):

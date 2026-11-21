@@ -2,30 +2,26 @@ from pathlib import Path
 
 import pygame
 
-from instinct.frontend.scenes.base_scene import BaseScene
-from instinct.frontend.settings import DEFAULT_TILE_SIZE
-
-from instinct.loaders.resource_manager import ResourceManager
 from instinct.engine.simulation import Simulation
-
+from instinct.frontend.adapters.event_adapter import EventAdapter
+from instinct.frontend.animation.animation_controller import AnimationController
 from instinct.frontend.core.simulation_controller import (
     SimulationController,
 )
-
-from instinct.frontend.menu.asset_loader import AssetLoader
-
-from instinct.frontend.world_view.camera import Camera
-from instinct.frontend.world_view.world_renderer import WorldRenderer
-from instinct.frontend.world_view.creature_renderer import CreatureRenderer
-from instinct.frontend.animation.animation_controller import AnimationController
-from instinct.frontend.adapters.event_adapter import EventAdapter
-from instinct.frontend.world_view.selection import Selection
-
-from instinct.frontend.interface.theme_manager import ThemeManager
-from instinct.frontend.interface.top_bar import TopBar
 from instinct.frontend.interface.creature_panel import CreaturePanel
 from instinct.frontend.interface.event_panel import EventPanel
 from instinct.frontend.interface.simulation_controls import SimulationControls
+from instinct.frontend.interface.theme_manager import ThemeManager
+from instinct.frontend.interface.tile_info_panel import TileInfoPanel
+from instinct.frontend.interface.top_bar import TopBar
+from instinct.frontend.menu.asset_loader import AssetLoader
+from instinct.frontend.scenes.base_scene import BaseScene
+from instinct.frontend.settings import DEFAULT_TILE_SIZE
+from instinct.frontend.world_view.camera import Camera
+from instinct.frontend.world_view.creature_renderer import CreatureRenderer
+from instinct.frontend.world_view.selection import Selection
+from instinct.frontend.world_view.world_renderer import WorldRenderer
+from instinct.loaders.resource_manager import ResourceManager
 
 
 class SimulationScene(BaseScene):
@@ -70,6 +66,7 @@ class SimulationScene(BaseScene):
         self.creature_panel = CreaturePanel()
         self.event_panel = None
         self.simulation_controls = None
+        self.tile_info_panel = TileInfoPanel()
 
         self._load_resources()
         self._update_layout()
@@ -274,8 +271,7 @@ class SimulationScene(BaseScene):
             return
 
         # Los controles del HUD reciben primero los eventos.
-        if self.simulation_controls is not None:
-            if self.simulation_controls.handle_event(event):
+        if self.simulation_controls is not None and self.simulation_controls.handle_event(event):
                 return
 
         if self.event_panel is not None:
@@ -301,13 +297,11 @@ class SimulationScene(BaseScene):
                     self.dragging = True
                     self.last_mouse_position = event.pos
 
-            elif event.button == 4:
-                if self.camera.viewport.collidepoint(event.pos):
+            elif event.button == 4 and self.camera.viewport.collidepoint(event.pos):
                     self.camera.zoom_in(event.pos)
 
-            elif event.button == 5:
-                if self.camera.viewport.collidepoint(event.pos):
-                    self.camera.zoom_out(event.pos)
+            elif event.button == 5 and self.camera.viewport.collidepoint(event.pos):
+                self.camera.zoom_out(event.pos)
 
         elif event.type == pygame.MOUSEBUTTONUP:
 
@@ -473,12 +467,12 @@ class SimulationScene(BaseScene):
             self.camera,
         )
 
+
     def _draw_interface(self, screen):
         """Dibuja todos los componentes del HUD."""
 
         colors = self.theme_manager.colors
 
-        # Barra superior.
         if self.controller is not None:
             self.top_bar.draw(
                 screen,
@@ -488,23 +482,39 @@ class SimulationScene(BaseScene):
                 self.controller.speed,
             )
 
-        # Panel de criatura seleccionada.
         selected_creatures = (
             self.selection.get_selected_creatures()
         )
 
-        self.creature_panel.draw(
-            screen,
-            self.left_panel_rect,
-            selected_creatures,
-            colors,
-        )
+        if selected_creatures:
+            # Si hay una criatura seleccionada, mostrar sus estadísticas.
+            self.creature_panel.draw(
+                screen,
+                self.left_panel_rect,
+                selected_creatures,
+                colors,
+            )
+        else:
+            # Si no hay criatura, mostrar la información de la casilla.
+            selected_tile = self.selection.get_selected_tile()
 
-        # Registro de acontecimientos.
+            tile = None
+
+            if selected_tile is not None:
+                tile_x, tile_y = selected_tile
+                tile = self.world.get_tile(tile_x, tile_y)
+
+            self.tile_info_panel.draw(
+                screen,
+                self.left_panel_rect,
+                tile,
+                selected_tile,
+                colors,
+            )
+
         if self.event_panel is not None:
             self.event_panel.draw(screen)
 
-        # Controles de simulación.
         if self.simulation_controls is not None:
             self.simulation_controls.draw(screen)
 

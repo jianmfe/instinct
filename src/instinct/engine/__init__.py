@@ -7,7 +7,6 @@ el registro de acontecimientos y la simulación.
 
 from importlib import import_module
 
-
 _EXPORTS = {
     "Event": (".event_log", "Event"),
     "EventLog": (".event_log", "EventLog"),

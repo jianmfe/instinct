@@ -6,8 +6,8 @@ las instrucciones y las posiciones de sus etiquetas
 para que el intérprete pueda ejecutarlo.
 """
 
+from collections.abc import Mapping
 from types import MappingProxyType
-from typing import Mapping
 
 from instinct.backend.ast_nodes import LabelNode, ProgramNode
 

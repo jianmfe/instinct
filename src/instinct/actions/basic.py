@@ -19,8 +19,6 @@ class WaitAction(Action):
         self.require_integer(args[0], "n", self.name)
 
         # El intérprete administra los turnos de espera.
-        # Esta acción no necesita modificar el mundo.
-        return
 
 
 class MoveAction(Action):
@@ -49,8 +47,6 @@ class MoveAction(Action):
         start_x = creature.x
         start_y = creature.y
 
-        # Avanza casilla por casilla hasta alcanzar speed
-        # o encontrar un obstáculo.
         for _ in range(max(0, speed)):
             next_x = creature.x + dx
             next_y = creature.y + dy
@@ -137,13 +133,10 @@ class AttackAction(Action):
         tile = world.get_tile(target_x, target_y)
 
         if dx == 0 and dy == 0:
-            tile.terrain.reserve = max(
-                0,
-                tile.terrain.reserve - damage,
-            )
+            reserve = tile.terrain.reserve or 0
+            tile.terrain.reserve = max(0, reserve - damage)
             return None
 
-        # Si hay una criatura, recibe el daño.
         target_creature = tile.creature
 
         if target_creature is not None:
@@ -181,28 +174,21 @@ class AttackAction(Action):
 
             return target_creature
 
-        # Si hay un objeto, pierde reserva.
         target_object = tile.object
 
         if target_object is not None:
-            target_object.reserve = max(
-                0,
-                target_object.reserve - damage,
-            )
+            reserve = target_object.reserve or 0
+            target_object.reserve = max(0, reserve - damage)
 
             if target_object.reserve <= 0:
                 tile.remove_object()
 
             return None
 
-        # Si no hay ocupante, el objetivo es el terreno.
-        tile.terrain.reserve = max(
-            0,
-            tile.terrain.reserve - damage,
-        )
+        reserve = tile.terrain.reserve or 0
+        tile.terrain.reserve = max(0, reserve - damage)
 
         return None
-
 
 
 class ConsumeAction(Action):
@@ -229,33 +215,84 @@ class ConsumeAction(Action):
         target_x = creature.x + dx
         target_y = creature.y + dy
 
-        # No se puede consumir fuera del mundo.
         if not world.in_bounds(target_x, target_y):
             return
 
         target_tile = world.get_tile(target_x, target_y)
+
+        if damage <= 0:
+            return
+
+        # Consumir una criatura enemiga.
+        target_creature = target_tile.creature
+
+        if target_creature is not None and target_creature is not creature:
+            target_creature.health -= damage
+            creature.health += heal
+
+            context.publish_action_event(
+                "consume",
+                data={
+                    "dx": dx,
+                    "dy": dy,
+                    "damage": damage,
+                    "heal": heal,
+                    "target": target_creature.name,
+                },
+            )
+
+            context.publish_action_event(
+                "damage",
+                target=target_creature,
+                data={
+                    "damage": damage,
+                    "remaining_health": target_creature.health,
+                },
+            )
+
+            if target_creature.health <= 0:
+                target_tile.remove_creature()
+
+                context.event_log.add(
+                    context.current_tick,
+                    (
+                        f"La criatura '{target_creature.name}' "
+                        f"ha muerto al ser consumida por "
+                        f"'{creature.name}'."
+                    ),
+                    "muerte",
+                )
+
+                context.publish_action_event(
+                    "death",
+                    target=target_creature,
+                    data={
+                        "cause": "consume",
+                        "damage": damage,
+                    },
+                )
+
+            return
+
+        # Mantener el consumo de objetos.
         target_object = target_tile.object
 
-        # Solo se pueden consumir objetos existentes.
         if target_object is None:
             return
 
-        if damage <= 0 or target_object.reserve <= 0:
+        reserve = target_object.reserve or 0
+
+        if reserve <= 0:
             return
 
-        # Consumir los recursos disponibles del objeto.
-        consumed = min(damage, target_object.reserve)
+        consumed = min(damage, reserve)
+        target_object.reserve = reserve - consumed
 
-        target_object.reserve -= consumed
-
-        # Eliminar el objeto cuando se agoten sus recursos.
         if target_object.reserve <= 0:
             target_tile.remove_object()
 
-        # Aplicar la curación.
         creature.health += heal
 
-        # Publicar el evento después de consumir correctamente.
         context.publish_action_event(
             "consume",
             data={
@@ -267,6 +304,7 @@ class ConsumeAction(Action):
                 "remaining_reserve": target_object.reserve,
             },
         )
+
 
 class ReproduceAction(Action):
     name = "reproduce"
@@ -300,8 +338,6 @@ class ReproduceAction(Action):
         target_x = mother.x + dx
         target_y = mother.y + dy
 
-        # La reproducción falla si el destino no es válido
-        # o no contiene únicamente terreno.
         if not world.in_bounds(target_x, target_y):
             return
 
@@ -310,7 +346,6 @@ class ReproduceAction(Action):
         if target_tile.is_occupied:
             return
 
-        # La madre debe tener más vida que la que entrega.
         if mother.health <= child_health:
             return
 
@@ -326,7 +361,6 @@ class ReproduceAction(Action):
             program=context.program,
         )
 
-        # Primero se descuenta la vida y luego nace la criatura.
         mother.health -= child_health
         world.place_creature(child, target_x, target_y)
 
@@ -364,9 +398,7 @@ class RoarAction(Action):
 
         context.publish_action_event(
             "roar",
-            data={
-                "message": value,
-            },
+            data={"message": value},
         )
 
 

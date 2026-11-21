@@ -26,5 +26,5 @@ class SelfPerceptions(PerceptionGroup):
             "x": creature.x,
             "y": creature.y,
             "terrain_here": tile.terrain.name,
-            "reserve_here": tile.terrain.reserve,
+            "reserve_here": tile.terrain.reserve or 0,
         }

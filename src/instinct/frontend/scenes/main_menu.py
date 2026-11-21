@@ -1,12 +1,11 @@
 
 import pygame
 
+from instinct.frontend.menu.background_renderer import BackgroundRenderer
+from instinct.frontend.menu.logo_renderer import LogoRenderer
+from instinct.frontend.menu.particle_system import ParticleSystem
 from instinct.frontend.scenes.base_scene import BaseScene
 from instinct.frontend.scenes.simulation_scene import SimulationScene
-
-from instinct.frontend.menu.background_renderer import BackgroundRenderer
-from instinct.frontend.menu.particle_system import ParticleSystem
-from instinct.frontend.menu.logo_renderer import LogoRenderer
 
 
 class MenuButton:
@@ -28,10 +27,8 @@ class MenuButton:
         if event.type == pygame.MOUSEMOTION:
             self.hovered = self.rect.collidepoint(event.pos)
 
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1 and self.rect.collidepoint(event.pos):
-                if self.callback:
-                    self.callback()
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(event.pos) and self.callback:
+                self.callback()
 
     def draw(self, screen):
         if not self.enabled:
@@ -198,10 +195,9 @@ class MainMenu(BaseScene):
         self._create_buttons()
 
     def handle_event(self, event):
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                self._quit_game()
-                return
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            self._quit_game()
+            return
 
         for button in self.buttons:
             button.handle_event(event)

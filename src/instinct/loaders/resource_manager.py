@@ -1,10 +1,12 @@
 
 from pathlib import Path
 
-from instinct.loaders.terrain_loader import TerrainLoader
-from instinct.loaders.object_loader import ObjectLoader
-from instinct.loaders.map_loader import MapLoader
 from instinct.loaders.creature_loader import CreatureLoader
+from instinct.loaders.map_loader import MapLoader
+from instinct.loaders.object_loader import ObjectLoader
+from instinct.loaders.terrain_loader import TerrainLoader
+from instinct.world.entities import Creature, Terrain, WorldObject
+from instinct.world.world_grid import WorldGrid
 
 
 class ResourceManager:
@@ -13,10 +15,10 @@ class ResourceManager:
     def __init__(self, resource_dir: str | Path = "resources"):
         self.resource_dir = Path(resource_dir)
 
-        self.terrains = {}
-        self.objects = {}
-        self.maps = {}
-        self.creatures = {}
+        self.terrains: dict[str, Terrain] = {}
+        self.objects: dict[str, WorldObject] = {}
+        self.maps: dict[str, WorldGrid] = {}
+        self.creatures: dict[str, Creature] = {}
 
         self.errors: list[str] = []
 

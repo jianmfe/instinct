@@ -10,7 +10,6 @@ Creature: criatura que participa en la simulación.
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     from instinct.runtime.program import Program
 
@@ -72,6 +71,14 @@ class Terrain(ResourceEntity):
 @dataclass
 class WorldObject(ResourceEntity):
     """Objeto del mundo que no regenera sus recursos."""
+
+    description: str = ""
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+
+        if not isinstance(self.description, str):
+            raise TypeError("La descripción del objeto debe ser texto.")
 
 
 @dataclass

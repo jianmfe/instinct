@@ -122,10 +122,7 @@ class SimulationControls:
         if self.step_button.handle_event(event):
             return True
 
-        if self.speed_slider.handle_event(event):
-            return True
-
-        return False
+        return bool(self.speed_slider.handle_event(event))
 
     def draw(self, screen):
         colors = self.theme_manager.colors

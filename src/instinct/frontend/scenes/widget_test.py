@@ -1,15 +1,15 @@
 
 import pygame
 
-from instinct.frontend.scenes.base_scene import BaseScene
 from instinct.frontend.interface.theme_manager import ThemeManager
 from instinct.frontend.interface.widgets.button import Button
-from instinct.frontend.interface.widgets.panel import Panel
-from instinct.frontend.interface.widgets.label import Label
-from instinct.frontend.interface.widgets.slider import Slider
-from instinct.frontend.interface.widgets.dropdown import Dropdown
 from instinct.frontend.interface.widgets.checkbox import Checkbox
+from instinct.frontend.interface.widgets.dropdown import Dropdown
+from instinct.frontend.interface.widgets.label import Label
+from instinct.frontend.interface.widgets.panel import Panel
 from instinct.frontend.interface.widgets.scroll_panel import ScrollPanel
+from instinct.frontend.interface.widgets.slider import Slider
+from instinct.frontend.scenes.base_scene import BaseScene
 
 
 class WidgetTestScene(BaseScene):
@@ -134,13 +134,12 @@ class WidgetTestScene(BaseScene):
         self.checkbox.handle_event(event)
         self.scroll_panel.handle_event(event)
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_ESCAPE:
-                from instinct.frontend.scenes.main_menu import MainMenu
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+            from instinct.frontend.scenes.main_menu import MainMenu
 
-                self.game.scene_manager.change_scene(
-                    MainMenu(self.game)
-                )
+            self.game.scene_manager.change_scene(
+                MainMenu(self.game)
+            )
 
     def draw(self, screen):
         screen.fill(self.background)
