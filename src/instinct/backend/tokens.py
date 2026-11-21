@@ -1,15 +1,17 @@
+
 import re
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any
 
+
 class TokenType(Enum):
-    #LITERALES
+    # LITERALES
     NUMBER = (r'\d+', False)
     STRING = (r'"([^"\n]*)"', False)
     IDENTIFIER = (r'[a-zA-Z_][a-zA-Z0-9_]*', False)
 
-    #COMPARACION
+    # COMPARACION
     EQUAL = (r'==', False)
     NOTEQUAL = (r'!=', False)
     GREATEREQUAL = (r'>=', False)
@@ -17,8 +19,7 @@ class TokenType(Enum):
     GREATER = (r'>', False)
     LESS = (r'<', False)
 
-
-    #OPERADORES
+    # OPERADORES
     PLUS = (r'\+', False)
     MINUS = (r'-', False)
     MULTIPLY = (r'\*', False)
@@ -26,17 +27,16 @@ class TokenType(Enum):
     MODULO = (r'%', False)
     ASSIGN = (r'=', False)
 
-
-
     IF = (r'\bif\b', True)
     GOTO = (r'\bgoto\b', True)
     COMMENT = (r'#[^\n]*', False)
-    #LOGICA
+
+    # LOGICA
     AND = (r'\band\b', True)
     OR = (r'\bor\b', True)
     NOT = (r'\bnot\b', True)
 
-    #DELIMITADORES
+    # DELIMITADORES
     LPAREN = (r'\(', False)
     RPAREN = (r'\)', False)
     COMMA = (r',', False)
@@ -51,14 +51,28 @@ class TokenType(Enum):
         self._compiled_regex = re.compile(f"^{pattern}")
 
     @classmethod
-    def keywords(cls) -> dict[str, 'TokenType']:
-        if not hasattr(cls, "_kw_map"):
-            cls._kw_map = {member.name.lower(): member for member in cls if member.is_keyword}
-        return cls._kw_map
+    def keywords(cls) -> dict[str, "TokenType"]:
+        global _KEYWORD_MAP
+
+        if _KEYWORD_MAP is None:
+            _KEYWORD_MAP = {
+                member.name.lower(): member
+                for member in cls
+                if member.is_keyword
+            }
+
+        return _KEYWORD_MAP
 
     @classmethod
     def get_token_spec(cls) -> list[tuple[str, str]]:
-        return [(token.name, token.pattern) for token in cls]
+        return [
+            (token.name, token.pattern)
+            for token in cls
+        ]
+
+
+_KEYWORD_MAP: dict[str, TokenType] | None = None
+
 
 @dataclass
 class Token:
@@ -67,6 +81,8 @@ class Token:
     line: int
     column: int
 
-
     def __repr__(self):
-        return f"Token({self.type.name}, {self.value!r} at {self.line}:{self.column})"
+        return (
+            f"Token({self.type.name}, "
+            f"{self.value!r} at {self.line}:{self.column})"
+        )

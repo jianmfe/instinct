@@ -48,15 +48,13 @@ class ActionEvent:
         if type(self.x) is not int or type(self.y) is not int:
             raise ValueError("Las coordenadas de la criatura no son válidas.")
 
-        if self.target_id is not None:
-            if type(self.target_id) is not int or self.target_id <= 0:
-                raise ValueError("El identificador del objetivo no es válido.")
+        if self.target_id is not None and (type(self.target_id) is not int or self.target_id <= 0):
+            raise ValueError("El identificador del objetivo no es válido.")
 
         if (self.target_x is None) != (self.target_y is None):
             raise ValueError("Las coordenadas del objetivo están incompletas.")
 
-        if self.target_x is not None:
-            if type(self.target_x) is not int or type(self.target_y) is not int:
+        if self.target_x is not None and (type(self.target_x) is not int or type(self.target_y) is not int):
                 raise ValueError("Las coordenadas del objetivo no son válidas.")
 
         if self.actor_ref is not None:

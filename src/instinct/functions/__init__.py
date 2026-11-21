@@ -10,11 +10,10 @@ from instinct.functions.base import Function, FunctionValue
 from instinct.functions.basic import NameFunction, SeeFunction
 from instinct.functions.registry import FunctionRegistry
 
-
 __all__ = [
     "Function",
-    "FunctionValue",
-    "SeeFunction",
-    "NameFunction",
     "FunctionRegistry",
+    "FunctionValue",
+    "NameFunction",
+    "SeeFunction",
 ]

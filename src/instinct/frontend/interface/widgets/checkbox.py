@@ -28,8 +28,7 @@ class Checkbox:
         self.box_size = 22
 
     def handle_event(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.rect.collidepoint(event.pos):
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and self.rect.collidepoint(event.pos):
                 self.checked = not self.checked
 
                 if self.callback:

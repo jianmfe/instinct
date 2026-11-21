@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod
 
 from instinct.runtime.execution_context import ExecutionContext
 
-
 PerceptionValue = int | str
 
 

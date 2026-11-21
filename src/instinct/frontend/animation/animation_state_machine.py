@@ -1,10 +1,12 @@
+from typing import ClassVar
+
 from instinct.frontend.animation.animation_state import AnimationState
 
 
 class AnimationStateMachine:
     """FSM visual independiente para una instancia de criatura."""
 
-    PRIORITY = {
+    PRIORITY: ClassVar[dict[AnimationState, int]] = {
         AnimationState.IDLE: 0,
         AnimationState.WALK: 10,
         AnimationState.RUN: 20,

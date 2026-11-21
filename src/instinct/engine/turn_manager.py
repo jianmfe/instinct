@@ -12,7 +12,6 @@ from collections.abc import Callable
 from instinct.world.entities import Creature
 from instinct.world.world_grid import WorldGrid
 
-
 TurnExecutor = Callable[[Creature, int], None]
 
 

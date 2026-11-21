@@ -16,13 +16,12 @@ from instinct.world.entities import (
 from instinct.world.tile import Tile
 from instinct.world.world_grid import WorldGrid
 
-
 __all__ = [
-    "SeeResult",
     "Creature",
     "ResourceEntity",
+    "SeeResult",
     "Terrain",
-    "WorldObject",
     "Tile",
     "WorldGrid",
+    "WorldObject",
 ]

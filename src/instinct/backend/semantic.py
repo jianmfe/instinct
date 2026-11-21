@@ -1,9 +1,18 @@
 from .ast_nodes import (
-    ProgramNode, LabelNode, AssignNode,
-    IfGotoNode, GotoNode, ActionNode, BinaryOpNode,
-    UnaryOpNode, NumberNode, StringNode, IdentifierNode,
-    FunctionCallNode
+    ActionNode,
+    AssignNode,
+    BinaryOpNode,
+    FunctionCallNode,
+    GotoNode,
+    IdentifierNode,
+    IfGotoNode,
+    LabelNode,
+    NumberNode,
+    ProgramNode,
+    StringNode,
+    UnaryOpNode,
 )
+
 
 class SemanticError(Exception):
     pass
@@ -133,10 +142,7 @@ class SemanticAnalyzer:
             )
 
     def visit_expr(self, expr):
-        if isinstance(expr, (NumberNode, StringNode)):
-            return
-
-        elif isinstance(expr, IdentifierNode):
+        if isinstance(expr, (NumberNode, StringNode, IdentifierNode)):
             return
 
         elif isinstance(expr, BinaryOpNode):

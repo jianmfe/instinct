@@ -1,8 +1,8 @@
 
 import pygame
 
-from instinct.frontend.scenes.base_scene import BaseScene
 from instinct.frontend.menu.asset_loader import AssetLoader
+from instinct.frontend.scenes.base_scene import BaseScene
 
 
 class AssetTestScene(BaseScene):

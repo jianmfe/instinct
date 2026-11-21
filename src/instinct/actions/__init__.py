@@ -18,15 +18,14 @@ from instinct.actions.basic import (
 )
 from instinct.actions.registry import ActionRegistry
 
-
 __all__ = [
     "Action",
     "ActionRegistry",
-    "WaitAction",
-    "MoveAction",
     "AttackAction",
     "ConsumeAction",
+    "MoveAction",
     "ReproduceAction",
     "RoarAction",
     "SayAction",
+    "WaitAction",
 ]

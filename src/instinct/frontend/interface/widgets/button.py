@@ -42,17 +42,16 @@ class Button:
             if event.button == 1:
                 self.pressed = self.rect.collidepoint(event.pos)
 
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if event.button == 1:
-                clicked = (
-                    self.pressed
-                    and self.rect.collidepoint(event.pos)
-                )
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+            clicked = (
+                self.pressed
+                and self.rect.collidepoint(event.pos)
+            )
 
-                self.pressed = False
+            self.pressed = False
 
-                if clicked and self.callback is not None:
-                    self.callback()
+            if clicked and self.callback is not None:
+                self.callback()
 
     def draw(self, surface):
         color = self.background

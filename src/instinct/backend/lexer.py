@@ -1,5 +1,7 @@
 import re
-from .tokens import TokenType, Token
+
+from .tokens import Token, TokenType
+
 
 class LexerError(Exception):
     pass

@@ -1,15 +1,14 @@
 import pygame
 
+from instinct.frontend.core.scene_manager import SceneManager
 from instinct.frontend.settings import (
+    FULLSCREEN,
+    RESIZABLE,
+    TARGET_FPS,
+    WINDOW_HEIGHT,
     WINDOW_TITLE,
     WINDOW_WIDTH,
-    WINDOW_HEIGHT,
-    RESIZABLE,
-    FULLSCREEN,
-    TARGET_FPS,
 )
-
-from instinct.frontend.core.scene_manager import SceneManager
 
 
 class Game:

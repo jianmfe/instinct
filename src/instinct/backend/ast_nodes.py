@@ -1,69 +1,88 @@
+
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Any
+
 
 @dataclass
 class ASTNode:
-    lineno : int
+    lineno: int
+
+
+class ExpressionNode(ASTNode):
+    """Base para los nodos del AST que pueden evaluarse."""
+
+    def evaluate(self, memory: Any) -> Any:
+        raise NotImplementedError(
+            "Las expresiones deben implementar evaluate()."
+        )
+
 
 @dataclass
 class HeaderNode(ASTNode):
-    creature : str
-    faction : str
-    health : int
-    vision : int
-    lifespan : int
+    creature: str
+    faction: str
+    health: int
+    vision: int
+    lifespan: int
 
 
 @dataclass
 class ProgramNode(ASTNode):
-    header : HeaderNode
-    statements : List[ASTNode]
+    header: HeaderNode
+    statements: list[ASTNode]
+
 
 @dataclass
 class LabelNode(ASTNode):
-    name : str
+    name: str
+
 
 @dataclass
 class GotoNode(ASTNode):
-    target : str
+    target: str
+
 
 @dataclass
 class IfGotoNode(ASTNode):
-    condition : ASTNode
-    target : str
+    condition: ExpressionNode
+    target: str
+
 
 @dataclass
 class AssignNode(ASTNode):
-    name : str
-    value : ASTNode
+    name: str
+    value: ExpressionNode
+
 
 @dataclass
 class ActionNode(ASTNode):
-    name : str
-    args : List[ASTNode]
+    name: str
+    args: list[ExpressionNode]
 
 
-#EXPRESION NODES
+# NODOS DE EXPRESION
 
 @dataclass
-class NumberNode(ASTNode):
-    value : int
+class NumberNode(ExpressionNode):
+    value: int
 
-    def evaluate(self, memory):
+    def evaluate(self, memory: Any) -> int:
         return self.value
 
-@dataclass
-class StringNode(ASTNode):
-    value : str
 
-    def evaluate(self, memory):
+@dataclass
+class StringNode(ExpressionNode):
+    value: str
+
+    def evaluate(self, memory: Any) -> str:
         return self.value
 
+
 @dataclass
-class IdentifierNode(ASTNode):
+class IdentifierNode(ExpressionNode):
     name: str
 
-    def evaluate(self, memory):
+    def evaluate(self, memory: Any) -> Any:
         missing = object()
 
         if isinstance(memory, dict):
@@ -79,37 +98,48 @@ class IdentifierNode(ASTNode):
 
         return value
 
-@dataclass
-class FunctionCallNode(ASTNode):
-    name : str
-    args : List[ASTNode]
-
-    def evaluate(self, memory: any) -> any:
-        evaluated_args = [arg.evaluate(memory) for arg in self.args]
-
-        if hasattr(memory, 'call_function'):
-            return memory.call_function(self.name, evaluated_args)
-
-        raise RuntimeError(f"Error en la linea {self.lineno}: Funcion o llamada desconocida '{self.name}'.")
 
 @dataclass
-class BinaryOpNode(ASTNode):
-    left: ASTNode
+class FunctionCallNode(ExpressionNode):
+    name: str
+    args: list[ExpressionNode]
+
+    def evaluate(self, memory: Any) -> Any:
+        evaluated_args = [
+            arg.evaluate(memory)
+            for arg in self.args
+        ]
+
+        if hasattr(memory, "call_function"):
+            return memory.call_function(
+                self.name,
+                evaluated_args
+            )
+
+        raise RuntimeError(
+            f"Error en la linea {self.lineno}: "
+            f"Funcion o llamada desconocida '{self.name}'."
+        )
+
+
+@dataclass
+class BinaryOpNode(ExpressionNode):
+    left: ExpressionNode
     op: str
-    right: ASTNode
+    right: ExpressionNode
 
-    def evaluate(self, memory):
+    def evaluate(self, memory: Any) -> Any:
         left_val = self.left.evaluate(memory)
 
         # Los operadores logicos aceptan cualquier tipo
         # y utilizan cortocircuito.
-        if self.op == 'and':
+        if self.op == "and":
             if not left_val:
                 return 0
 
             return 1 if self.right.evaluate(memory) else 0
 
-        if self.op == 'or':
+        if self.op == "or":
             if left_val:
                 return 1
 
@@ -126,14 +156,14 @@ class BinaryOpNode(ASTNode):
             )
 
         # Igualdad y desigualdad admiten enteros y textos.
-        if self.op in ('==', '!='):
+        if self.op in ("==", "!="):
             if type(left_val) not in (int, str):
                 raise RuntimeError(
                     f"Error en la linea {self.lineno}: "
                     f"Tipo de dato no valido para '{self.op}'."
                 )
 
-            if self.op == '==':
+            if self.op == "==":
                 return 1 if left_val == right_val else 0
 
             return 1 if left_val != right_val else 0
@@ -146,39 +176,41 @@ class BinaryOpNode(ASTNode):
                 f"El operador '{self.op}' requiere operandos numericos."
             )
 
-        if self.op == '+':
+        if self.op == "+":
             return left_val + right_val
 
-        elif self.op == '-':
+        elif self.op == "-":
             return left_val - right_val
 
-        elif self.op == '*':
+        elif self.op == "*":
             return left_val * right_val
 
-        elif self.op == '/':
+        elif self.op == "/":
             if right_val == 0:
                 raise RuntimeError(
                     f"Error en la linea {self.lineno}: Division por cero."
                 )
+
             return left_val // right_val
 
-        elif self.op == '%':
+        elif self.op == "%":
             if right_val == 0:
                 raise RuntimeError(
                     f"Error en la linea {self.lineno}: Modulo por cero."
                 )
+
             return left_val % right_val
 
-        elif self.op == '<':
+        elif self.op == "<":
             return 1 if left_val < right_val else 0
 
-        elif self.op == '>':
+        elif self.op == ">":
             return 1 if left_val > right_val else 0
 
-        elif self.op == '<=':
+        elif self.op == "<=":
             return 1 if left_val <= right_val else 0
 
-        elif self.op == '>=':
+        elif self.op == ">=":
             return 1 if left_val >= right_val else 0
 
         raise RuntimeError(
@@ -186,15 +218,16 @@ class BinaryOpNode(ASTNode):
             f"Operador binario desconocido '{self.op}'."
         )
 
-@dataclass
-class UnaryOpNode(ASTNode):
-    op: str
-    operand: ASTNode
 
-    def evaluate(self, memory):
+@dataclass
+class UnaryOpNode(ExpressionNode):
+    op: str
+    operand: ExpressionNode
+
+    def evaluate(self, memory: Any) -> Any:
         val = self.operand.evaluate(memory)
 
-        if self.op == '-':
+        if self.op == "-":
             if type(val) is not int:
                 raise RuntimeError(
                     f"Error en la linea {self.lineno}: "
@@ -203,7 +236,7 @@ class UnaryOpNode(ASTNode):
 
             return -val
 
-        elif self.op in ('not', '!'):
+        elif self.op in ("not", "!"):
             return 0 if val else 1
 
         raise RuntimeError(
@@ -211,21 +244,30 @@ class UnaryOpNode(ASTNode):
             f"Operador unario desconocido '{self.op}'."
         )
 
+
 def dump_ast(node, indent=0):
     pad = " " * indent
+
     if hasattr(node, "__dataclass_fields__"):
         print(f"{pad}{node.__class__.__name__}:")
+
         for field in node.__dataclass_fields__:
             value = getattr(node, field)
+
             if isinstance(value, list):
                 print(f"{pad} {field}: [")
+
                 for item in value:
                     dump_ast(item, indent + 2)
+
                 print(f"{pad} ]")
+
             elif hasattr(value, "__dataclass_fields__"):
                 print(f"{pad} {field}:")
                 dump_ast(value, indent + 2)
+
             else:
                 print(f"{pad} {field}: {value}")
+
     else:
         print(f"{pad}{node}")

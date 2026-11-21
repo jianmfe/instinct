@@ -7,7 +7,6 @@ from instinct.backend.ast_nodes import (
 )
 from instinct.runtime.execution_context import ExecutionContext
 
-
 MAX_INSTRUCTIONS_PER_TURN = 100
 
 

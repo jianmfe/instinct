@@ -1,8 +1,8 @@
 
 import pytest
 
-from instinct.backend.compiler import compile_file
 from instinct.backend.ast_nodes import ProgramNode
+from instinct.backend.compiler import compile_file
 from instinct.runtime.program import Program
 
 

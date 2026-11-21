@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import ClassVar, NoReturn
 
 from instinct.world.entities import WorldObject
 
@@ -6,10 +7,12 @@ from instinct.world.entities import WorldObject
 class ObjectLoader:
     """Carga y valida definiciones de objetos desde archivos .ob."""
 
-    REQUIRED_FIELDS = {"char", "resource_max"}
+    REQUIRED_FIELDS: ClassVar[set[str]] = {"char", "resource_max"}
+    OPTIONAL_FIELDS: ClassVar[set[str]] = {"description"}
 
     def load_file(self, filepath: str | Path) -> WorldObject:
         """Lee un archivo .ob y devuelve el objeto definido en él."""
+
         path = Path(filepath)
 
         try:
@@ -44,6 +47,8 @@ class ObjectLoader:
         declaration_line = 0
         fields: dict[str, tuple[str, int]] = {}
 
+        allowed_fields = self.REQUIRED_FIELDS | self.OPTIONAL_FIELDS
+
         for line_number, raw_line in enumerate(lines, start=1):
             line = raw_line.strip()
 
@@ -74,7 +79,7 @@ class ObjectLoader:
                 declaration_line = line_number
                 continue
 
-            if key not in self.REQUIRED_FIELDS:
+            if key not in allowed_fields:
                 self._error(
                     source,
                     line_number,
@@ -131,10 +136,13 @@ class ObjectLoader:
                 "'resource_max' no puede ser negativo.",
             )
 
+        description = fields.get("description", ("", 0))[0]
+
         return WorldObject(
             name=declaration,
             char=char,
             resource_max=resource_max,
+            description=description,
         )
 
     @staticmethod
@@ -153,7 +161,7 @@ class ObjectLoader:
             ) from None
 
     @staticmethod
-    def _error(source: str, line: int, message: str) -> None:
+    def _error(source: str, line: int, message: str) -> NoReturn:
         raise ValueError(
             f"Error en '{source}', línea {line}: {message}"
         )

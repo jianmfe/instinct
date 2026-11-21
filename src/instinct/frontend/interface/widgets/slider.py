@@ -94,8 +94,7 @@ class Slider:
             self._update_value(event.pos[0])
             return True
 
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            if self.dragging:
+        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and self.dragging:
                 self.dragging = False
                 return True
 

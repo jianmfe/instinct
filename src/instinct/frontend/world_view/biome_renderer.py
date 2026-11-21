@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import pygame
 
 
@@ -5,7 +7,7 @@ class BiomeRenderer:
     """Representa visualmente los terrenos del mundo."""
 
     # Colores provisionales mientras no estén disponibles los tiles.
-    TERRAIN_COLORS = {
+    TERRAIN_COLORS: ClassVar[dict[str, tuple[int, int, int]]] = {
         "grass": (83, 142, 76),
         "desert": (211, 178, 112),
         "sand": (211, 178, 112),

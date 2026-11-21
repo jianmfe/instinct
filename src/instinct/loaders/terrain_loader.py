@@ -1,5 +1,5 @@
-
 from pathlib import Path
+from typing import ClassVar, NoReturn
 
 from instinct.world.entities import Terrain
 
@@ -7,7 +7,7 @@ from instinct.world.entities import Terrain
 class TerrainLoader:
     """Carga y valida definiciones de terrenos desde archivos .te."""
 
-    REQUIRED_FIELDS = {"char", "resource_max", "regen"}
+    REQUIRED_FIELDS: ClassVar[set[str]] = {"char", "resource_max", "regen"}
 
     def load_file(self, filepath: str | Path) -> Terrain:
         """Lee un archivo .te y devuelve el terreno definido en él."""
@@ -170,7 +170,7 @@ class TerrainLoader:
             ) from None
 
     @staticmethod
-    def _error(source: str, line: int, message: str) -> None:
+    def _error(source: str, line: int, message: str) -> NoReturn:
         raise ValueError(
             f"Error en '{source}', línea {line}: {message}"
         )
