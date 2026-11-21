@@ -204,6 +204,7 @@ class AttackAction(Action):
         return None
 
 
+
 class ConsumeAction(Action):
     name = "consume"
     arity = 4
@@ -222,22 +223,50 @@ class ConsumeAction(Action):
 
         self.require_direction(dx, dy, self.name)
 
+        creature = context.creature_obj
+        world = context.world
+
+        target_x = creature.x + dx
+        target_y = creature.y + dy
+
+        # No se puede consumir fuera del mundo.
+        if not world.in_bounds(target_x, target_y):
+            return
+
+        target_tile = world.get_tile(target_x, target_y)
+        target_object = target_tile.object
+
+        # Solo se pueden consumir objetos existentes.
+        if target_object is None:
+            return
+
+        if damage <= 0 or target_object.reserve <= 0:
+            return
+
+        # Consumir los recursos disponibles del objeto.
+        consumed = min(damage, target_object.reserve)
+
+        target_object.reserve -= consumed
+
+        # Eliminar el objeto cuando se agoten sus recursos.
+        if target_object.reserve <= 0:
+            target_tile.remove_object()
+
+        # Aplicar la curación.
+        creature.health += heal
+
+        # Publicar el evento después de consumir correctamente.
         context.publish_action_event(
             "consume",
             data={
                 "dx": dx,
                 "dy": dy,
-                "damage": damage,
+                "damage": consumed,
                 "heal": heal,
+                "object": target_object.name,
+                "remaining_reserve": target_object.reserve,
             },
         )
-
-        AttackAction._attack_target(context, dx, dy, damage)
-
-        # La curación no depende de cuánto daño se haya causado.
-        creature = context.creature_obj
-        creature.health += heal
-
 
 class ReproduceAction(Action):
     name = "reproduce"

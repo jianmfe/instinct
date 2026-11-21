@@ -34,10 +34,19 @@ class ObjectRenderer:
         image = self.get_object_image(obj)
 
         if image is not None:
-            if image.get_size() != rect.size:
-                image = pygame.transform.scale(image, rect.size)
+            if obj.name.lower() == "shaka":
+                zoom = 2.2
+            else:
+                zoom = 1.0
 
-            screen.blit(image, rect)
+            width = int(rect.width * zoom)
+            height = int(rect.height * zoom)
+
+            if image.get_size() != (width, height):
+                image = pygame.transform.scale(image, (width, height))
+
+            draw_rect = image.get_rect(center=rect.center)
+            screen.blit(image, draw_rect)
         else:
             self._draw_placeholder(screen, rect)
 

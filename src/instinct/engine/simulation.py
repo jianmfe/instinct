@@ -10,7 +10,6 @@ naturales del mundo.
 import random
 
 from instinct.actions.registry import ActionRegistry
-from instinct.backend.ast_nodes import ProgramNode
 from instinct.engine.action_event import ActionEventLog
 from instinct.engine.event_log import EventLog
 from instinct.engine.natural_laws import NaturalLaws
@@ -37,27 +36,34 @@ class Simulation:
         if seed is not None and (
             not isinstance(seed, int) or isinstance(seed, bool)
         ):
-            raise TypeError("La semilla aleatoria debe ser un número entero.")
+            raise TypeError(
+                "La semilla aleatoria debe ser un número entero."
+            )
 
         self.world = world
         self.tick = 0
 
-        # Un único generador aleatorio compartido por la simulación.
         self.rng = random.Random(seed)
 
-        # Registros compartidos de acontecimientos.
         self.event_log = EventLog()
         self.action_event_log = ActionEventLog()
 
         self.turn_manager = TurnManager(self.rng)
 
-        # Registros compartidos por todas las criaturas.
         self.action_registry = ActionRegistry()
         self.function_registry = FunctionRegistry()
 
-        # Cada criatura conserva su propio contexto de ejecución.
-        # Se utiliza id(creature) porque Creature no es hashable.
         self._contexts: dict[int, ExecutionContext] = {}
+
+    @property
+    def is_finished(self) -> bool:
+        """Indica si ya no quedan criaturas en el mundo."""
+
+        return not any(
+            tile.creature is not None
+            for row in self.world.tiles
+            for tile in row
+        )
 
     def _get_execution_context(
         self,
@@ -134,14 +140,16 @@ class Simulation:
         """
         Ejecuta un tick completo de la simulación.
 
-        Si se proporciona un callback, utiliza ese ejecutor.
-        En caso contrario, ejecuta los programas de las criaturas.
+        Si no quedan criaturas, no se ejecuta ningún tick.
         """
 
         if execute_turn is not None and not callable(execute_turn):
             raise TypeError(
                 "El ejecutor de turnos debe ser una función válida."
             )
+
+        if self.is_finished:
+            return
 
         self.tick += 1
 
@@ -183,4 +191,7 @@ class Simulation:
             )
 
         for _ in range(ticks):
+            if self.is_finished:
+                break
+
             self.run_tick(execute_turn)

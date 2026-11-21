@@ -1,4 +1,3 @@
-
 """
 Representación ejecutable de un programa de Instinct.
 
