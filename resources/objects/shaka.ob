@@ -2,3 +2,5 @@ object Shaka
 char S
 resource_max 100
 description Te lo juro que no tomo mas shaka
+consumable true
+destructible true

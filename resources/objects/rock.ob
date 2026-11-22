@@ -1,3 +1,5 @@
 object Rock
 char #
 resource_max 100
+consumable false
+destructible false

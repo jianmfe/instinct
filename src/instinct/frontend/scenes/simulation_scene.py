@@ -1,28 +1,34 @@
+
 from pathlib import Path
+import random
 
 import pygame
 
+from instinct.frontend.scenes.base_scene import BaseScene
+from instinct.frontend.settings import DEFAULT_TILE_SIZE
+
+from instinct.loaders.resource_manager import ResourceManager
 from instinct.engine.simulation import Simulation
-from instinct.frontend.adapters.event_adapter import EventAdapter
-from instinct.frontend.animation.animation_controller import AnimationController
+
 from instinct.frontend.core.simulation_controller import (
     SimulationController,
 )
+
+from instinct.frontend.menu.asset_loader import AssetLoader
+
+from instinct.frontend.world_view.camera import Camera
+from instinct.frontend.world_view.world_renderer import WorldRenderer
+from instinct.frontend.world_view.creature_renderer import CreatureRenderer
+from instinct.frontend.animation.animation_controller import AnimationController
+from instinct.frontend.adapters.event_adapter import EventAdapter
+from instinct.frontend.world_view.selection import Selection
+
+from instinct.frontend.interface.theme_manager import ThemeManager
+from instinct.frontend.interface.top_bar import TopBar
 from instinct.frontend.interface.creature_panel import CreaturePanel
 from instinct.frontend.interface.event_panel import EventPanel
 from instinct.frontend.interface.simulation_controls import SimulationControls
-from instinct.frontend.interface.theme_manager import ThemeManager
 from instinct.frontend.interface.tile_info_panel import TileInfoPanel
-from instinct.frontend.interface.top_bar import TopBar
-from instinct.frontend.menu.asset_loader import AssetLoader
-from instinct.frontend.scenes.base_scene import BaseScene
-from instinct.frontend.settings import DEFAULT_TILE_SIZE
-from instinct.frontend.world_view.camera import Camera
-from instinct.frontend.world_view.creature_renderer import CreatureRenderer
-from instinct.frontend.world_view.selection import Selection
-from instinct.frontend.world_view.world_renderer import WorldRenderer
-from instinct.loaders.resource_manager import ResourceManager
-
 
 class SimulationScene(BaseScene):
     """Escena principal de visualización y control del mundo."""
@@ -105,7 +111,9 @@ class SimulationScene(BaseScene):
             return
 
         self.world = world
-        self._place_naruto()
+
+        # Colocar las criaturas antes de iniciar la simulación.
+        self._place_initial_creatures()
 
         self.simulation = Simulation(self.world)
 
@@ -133,22 +141,50 @@ class SimulationScene(BaseScene):
         self.selection.clear()
         self.error_message = None
 
-    def _place_naruto(self):
-        """Crea y coloca una instancia de Naruto en el centro del mapa."""
+    def _place_initial_creatures(self):
+        """Coloca las criaturas iniciales en posiciones aleatorias."""
 
-        naruto = self.resource_manager.create_creature("Naruto")
+        creature_names = (
+            "Naruto",
+            "Sasuke",
+            "Madara",
+            "Obito",
+        )
 
-        if naruto is None:
-            print("No se encontró la plantilla de Naruto.")
+        for creature_name in creature_names:
+            self._place_creature_randomly(creature_name)
+
+    def _place_creature_randomly(self, creature_name):
+        """Crea una criatura y la coloca en una casilla libre aleatoria."""
+
+        creature = self.resource_manager.create_creature(creature_name)
+
+        if creature is None:
+            print(
+                f"No se encontró la plantilla de {creature_name}."
+            )
             return
 
-        x = self.world.width // 2
-        y = self.world.height // 2
+        available_positions = [
+            (x, y)
+            for y in range(self.world.height)
+            for x in range(self.world.width)
+            if not self.world.get_tile(x, y).is_occupied
+        ]
 
-        self.world.place_creature(naruto, x, y)
+        if not available_positions:
+            print(
+                f"No hay casillas libres para colocar a {creature_name}."
+            )
+            return
 
-        print(f"Naruto colocado en ({x}, {y}).")
+        x, y = random.choice(available_positions)
 
+        self.world.place_creature(creature, x, y)
+
+        print(
+            f"{creature_name} colocado aleatoriamente en ({x}, {y})."
+        )
 
     def _update_layout(self):
         """Calcula las áreas del mapa y los paneles del HUD."""
@@ -171,7 +207,6 @@ class SimulationScene(BaseScene):
         panel_top = 92
         bottom_height = 94
 
-        # Los paneles laterales llegan hasta el margen inferior.
         panel_height = screen_height - panel_top - margin
 
         left_rect = pygame.Rect(
@@ -188,8 +223,6 @@ class SimulationScene(BaseScene):
             panel_height,
         )
 
-        # El espacio inferior se reserva solamente para los controles
-        # y el área central del mapa.
         viewport_x = left_rect.right + gap
         viewport_y = panel_top
 
@@ -270,8 +303,8 @@ class SimulationScene(BaseScene):
 
             return
 
-        # Los controles del HUD reciben primero los eventos.
-        if self.simulation_controls is not None and self.simulation_controls.handle_event(event):
+        if self.simulation_controls is not None:
+            if self.simulation_controls.handle_event(event):
                 return
 
         if self.event_panel is not None:
@@ -280,7 +313,6 @@ class SimulationScene(BaseScene):
         if self.camera is None:
             return
 
-        # Interacciones con el mapa.
         if event.type == pygame.MOUSEBUTTONDOWN:
 
             if event.button == 1:
@@ -289,7 +321,9 @@ class SimulationScene(BaseScene):
                         world=self.world,
                         camera=self.camera,
                         mouse_position=event.pos,
-                        shift=bool(getattr(event, "mod", 0) & pygame.KMOD_SHIFT),
+                        shift=bool(
+                            getattr(event, "mod", 0) & pygame.KMOD_SHIFT
+                        ),
                     )
 
             elif event.button == 2:
@@ -297,11 +331,13 @@ class SimulationScene(BaseScene):
                     self.dragging = True
                     self.last_mouse_position = event.pos
 
-            elif event.button == 4 and self.camera.viewport.collidepoint(event.pos):
+            elif event.button == 4:
+                if self.camera.viewport.collidepoint(event.pos):
                     self.camera.zoom_in(event.pos)
 
-            elif event.button == 5 and self.camera.viewport.collidepoint(event.pos):
-                self.camera.zoom_out(event.pos)
+            elif event.button == 5:
+                if self.camera.viewport.collidepoint(event.pos):
+                    self.camera.zoom_out(event.pos)
 
         elif event.type == pygame.MOUSEBUTTONUP:
 
@@ -351,7 +387,6 @@ class SimulationScene(BaseScene):
         if self.event_adapter is not None:
             self.event_adapter.process_new_events()
 
-
     def _update_camera_follow(self):
         """Centra la cámara en la última criatura seleccionada que siga viva."""
 
@@ -363,7 +398,6 @@ class SimulationScene(BaseScene):
         if not selected:
             return
 
-        # Identificar las criaturas que siguen presentes en el mundo.
         living_creatures = {
             id(tile.creature)
             for row in self.world.tiles
@@ -371,7 +405,6 @@ class SimulationScene(BaseScene):
             if tile.creature is not None
         }
 
-        # Seguir la última criatura seleccionada que siga viva.
         target = next(
             (
                 creature
@@ -396,8 +429,6 @@ class SimulationScene(BaseScene):
             visual_y + 0.5
         ) * self.camera.tile_size
 
-
-
     def update(self, delta_time):
         """Actualiza simulación, acontecimientos, animaciones y cámara."""
 
@@ -408,14 +439,12 @@ class SimulationScene(BaseScene):
 
         self.creature_renderer.update(delta_time)
 
-        # Seguir la posición visual interpolada de la criatura.
         self._update_camera_follow()
 
         if self.event_panel is not None and self.simulation is not None:
             self.event_panel.set_events(
                 self.simulation.event_log.events
             )
-
 
     def draw(self, screen):
 
@@ -429,7 +458,6 @@ class SimulationScene(BaseScene):
         if self.world is None:
             return
 
-        # Mundo y criaturas.
         self.world_renderer.draw(screen)
         self._draw_creatures(screen)
 
@@ -438,7 +466,6 @@ class SimulationScene(BaseScene):
             self.camera,
         )
 
-        # HUD.
         self._draw_interface(screen)
 
     def _draw_creatures(self, screen):
@@ -467,7 +494,6 @@ class SimulationScene(BaseScene):
             self.camera,
         )
 
-
     def _draw_interface(self, screen):
         """Dibuja todos los componentes del HUD."""
 
@@ -487,7 +513,6 @@ class SimulationScene(BaseScene):
         )
 
         if selected_creatures:
-            # Si hay una criatura seleccionada, mostrar sus estadísticas.
             self.creature_panel.draw(
                 screen,
                 self.left_panel_rect,
@@ -495,9 +520,7 @@ class SimulationScene(BaseScene):
                 colors,
             )
         else:
-            # Si no hay criatura, mostrar la información de la casilla.
             selected_tile = self.selection.get_selected_tile()
-
             tile = None
 
             if selected_tile is not None:

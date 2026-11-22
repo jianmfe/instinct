@@ -120,6 +120,24 @@ class TileInfoPanel:
                 y,
                 colors,
             )
+            
+            y = self._draw_property(
+                screen,
+                "Consumible",
+                "Sí" if obj.consumable else "No",
+                x,
+                y,
+                colors,
+            )
+
+            y = self._draw_property(
+                screen,
+                "Destructible",
+                "Sí" if obj.destructible else "No",
+                x,
+                y,
+                colors,
+            )
 
             description = getattr(obj, "description", "")
 

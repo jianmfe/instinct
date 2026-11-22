@@ -8,7 +8,11 @@ class ObjectLoader:
     """Carga y valida definiciones de objetos desde archivos .ob."""
 
     REQUIRED_FIELDS: ClassVar[set[str]] = {"char", "resource_max"}
-    OPTIONAL_FIELDS: ClassVar[set[str]] = {"description"}
+    OPTIONAL_FIELDS: ClassVar[set[str]] = {
+        "description",
+        "consumable",
+        "destructible",
+    }
 
     def load_file(self, filepath: str | Path) -> WorldObject:
         """Lee un archivo .ob y devuelve el objeto definido en él."""
@@ -138,11 +142,25 @@ class ObjectLoader:
 
         description = fields.get("description", ("", 0))[0]
 
+        consumable = self._parse_boolean(
+            fields.get("consumable", ("true", 0)),
+            "consumable",
+            source,
+        )
+
+        destructible = self._parse_boolean(
+            fields.get("destructible", ("true", 0)),
+            "destructible",
+            source,
+        )
+
         return WorldObject(
             name=declaration,
             char=char,
             resource_max=resource_max,
             description=description,
+            consumable=consumable,
+            destructible=destructible,
         )
 
     @staticmethod
@@ -159,6 +177,26 @@ class ObjectLoader:
                 f"Error en '{source}', línea {line_number}: "
                 f"'{field}' debe ser un número entero."
             ) from None
+
+    @staticmethod
+    def _parse_boolean(
+        field_data: tuple[str, int],
+        field: str,
+        source: str,
+    ) -> bool:
+        value, line_number = field_data
+        normalized = value.lower()
+
+        if normalized == "true":
+            return True
+
+        if normalized == "false":
+            return False
+
+        raise ValueError(
+            f"Error en '{source}', línea {line_number}: "
+            f"'{field}' debe ser 'true' o 'false'."
+        )
 
     @staticmethod
     def _error(source: str, line: int, message: str) -> NoReturn:
