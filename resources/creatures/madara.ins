@@ -1,0 +1,49 @@
+# Madara - combatiente dominante
+creature Madara
+faction uchiha
+health 140
+vision 5
+lifespan 700
+
+start:
+    if health <= 45 goto recover
+    if enemies_near > 0 and roars_near == 0 goto declare
+    if enemy_dist == 1 goto crush
+    if enemy_dist > 1 goto advance
+    if object_dist == 1 goto consume_resource
+    if object_dist > 1 goto approach_resource
+    goto patrol
+
+declare:
+    roar("Les mostrare el verdadero poder!")
+    goto start
+
+crush:
+    attack(enemy_dx, enemy_dy, 24)
+    goto start
+
+advance:
+    move(enemy_dx, enemy_dy, 2)
+    goto start
+
+recover:
+    if object_dist == 1 goto consume_resource
+    if object_dist > 1 goto approach_resource
+    if enemy_dist == 1 goto repel
+    goto patrol
+
+repel:
+    attack(enemy_dx, enemy_dy, 18)
+    goto start
+
+consume_resource:
+    consume(object_dx, object_dy, 15, 22)
+    goto start
+
+approach_resource:
+    move(object_dx, object_dy, 1)
+    goto start
+
+patrol:
+    move(random % 3 - 1, random % 3 - 1, 1)
+    goto start

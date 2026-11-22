@@ -1,0 +1,44 @@
+# Sasuke - cazador selectivo
+creature Sasuke
+faction uchiha
+health 100
+vision 6
+lifespan 500
+
+start:
+    if health <= 30 goto recover
+    if enemy_dist == 1 goto strike
+    if enemy_dist > 1 goto stalk
+    if object_dist == 1 goto consume_resource
+    if object_dist > 1 goto approach_resource
+    goto explore
+
+strike:
+    attack(enemy_dx, enemy_dy, 16)
+    goto start
+
+stalk:
+    move(enemy_dx, enemy_dy, 2)
+    goto start
+
+recover:
+    if object_dist == 1 goto consume_resource
+    if object_dist > 1 goto approach_resource
+    if enemy_dist == 1 goto withdraw
+    goto explore
+
+withdraw:
+    move(-enemy_dx, -enemy_dy, 1)
+    goto start
+
+consume_resource:
+    consume(object_dx, object_dy, 12, 20)
+    goto start
+
+approach_resource:
+    move(object_dx, object_dy, 1)
+    goto start
+
+explore:
+    move(random % 3 - 1, random % 3 - 1, 1)
+    goto start

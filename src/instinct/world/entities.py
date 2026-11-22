@@ -3,7 +3,7 @@
 Entidades que pueden existir en el mundo de Instinct.
 
 Terrain: terreno que recupera sus recursos con el paso de los ticks.
-WorldObject: objeto cuyos recursos no se regeneran.
+WorldObject: objeto con propiedades de consumo y destrucción.
 Creature: criatura que participa en la simulación.
 """
 
@@ -70,15 +70,27 @@ class Terrain(ResourceEntity):
 
 @dataclass
 class WorldObject(ResourceEntity):
-    """Objeto del mundo que no regenera sus recursos."""
+    """Objeto del mundo con propiedades independientes de consumo y daño."""
 
     description: str = ""
+    consumable: bool = True
+    destructible: bool = True
 
     def __post_init__(self) -> None:
         super().__post_init__()
 
         if not isinstance(self.description, str):
             raise TypeError("La descripción del objeto debe ser texto.")
+
+        if not isinstance(self.consumable, bool):
+            raise TypeError(
+                "La propiedad 'consumable' debe ser booleana."
+            )
+
+        if not isinstance(self.destructible, bool):
+            raise TypeError(
+                "La propiedad 'destructible' debe ser booleana."
+            )
 
 
 @dataclass

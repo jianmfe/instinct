@@ -1,4 +1,4 @@
-# Naruto - script de prueba de animaciones
+# Naruto - protector de Konoha
 creature Naruto
 faction konoha
 health 100
@@ -6,8 +6,44 @@ vision 6
 lifespan 500
 
 start:
-    move(random % 3 - 1, random % 3 - 1, 2)
-    attack(0, 0, 1)
-    roar("Konoha!")
-    consume(0, 0, 1, 1)
+    if health <= 25 goto recover
+    if enemy_dist == 1 goto defend
+    if enemies_near > 0 and roars_near == 0 goto signal
+    if enemy_dist > 1 goto pursue
+    if object_dist == 1 goto eat
+    if object_dist > 1 goto forage
+    goto explore
+
+defend:
+    attack(enemy_dx, enemy_dy, 12)
+    goto start
+
+signal:
+    roar("Konoha esta bajo amenaza!")
+    goto start
+
+pursue:
+    move(enemy_dx, enemy_dy, 1)
+    goto start
+
+recover:
+    if object_dist == 1 goto eat
+    if object_dist > 1 goto forage
+    if enemy_dist == 1 goto retreat
+    goto explore
+
+retreat:
+    move(-enemy_dx, -enemy_dy, 1)
+    goto start
+
+eat:
+    consume(object_dx, object_dy, 10, 18)
+    goto start
+
+forage:
+    move(object_dx, object_dy, 1)
+    goto start
+
+explore:
+    move(random % 3 - 1, random % 3 - 1, 1)
     goto start

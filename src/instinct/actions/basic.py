@@ -177,6 +177,10 @@ class AttackAction(Action):
         target_object = tile.object
 
         if target_object is not None:
+            # Los objetos indestructibles no reciben daño.
+            if not target_object.destructible:
+                return None
+
             reserve = target_object.reserve or 0
             target_object.reserve = max(0, reserve - damage)
 
@@ -281,7 +285,17 @@ class ConsumeAction(Action):
             return
 
         reserve = target_object.reserve or 0
+        target_object = target_tile.object
 
+        if target_object is None:
+            return
+
+        # Los objetos no consumibles no pueden ser ingeridos.
+        if not target_object.consumable:
+            return
+
+        reserve = target_object.reserve or 0
+        
         if reserve <= 0:
             return
 
