@@ -6,7 +6,8 @@ from instinct.frontend.menu.logo_renderer import LogoRenderer
 from instinct.frontend.menu.particle_system import ParticleSystem
 from instinct.frontend.scenes.base_scene import BaseScene
 from instinct.frontend.scenes.simulation_scene import SimulationScene
-
+from instinct.frontend.scenes.new_simulation import NewSimulationScene
+from instinct.frontend.scenes.settings_scene import SettingsScene
 
 class MenuButton:
     """Botón sencillo para el menú principal."""
@@ -151,7 +152,7 @@ class MainMenu(BaseScene):
             MenuButton(
                 "Configuración",
                 button_rect(3),
-                enabled=False,
+                callback=self._open_settings,
             ),
 
             MenuButton(
@@ -162,10 +163,10 @@ class MainMenu(BaseScene):
         ]
 
     def _new_simulation(self):
-        """Abre la escena de simulación."""
+        """Abre la configuración de una nueva simulación."""
 
         self.game.scene_manager.change_scene(
-            SimulationScene(self.game)
+            NewSimulationScene(self.game)
         )
 
     def _quit_game(self):
@@ -249,4 +250,10 @@ class MainMenu(BaseScene):
         screen.blit(
             version,
             (20, height - 30),
+        )
+    def _open_settings(self):
+        """Abre la pantalla de configuración."""
+
+        self.game.scene_manager.change_scene(
+            SettingsScene(self.game)
         )

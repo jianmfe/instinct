@@ -31,9 +31,11 @@ class ExecutionContext:
         "health", "vision", "lifespan", "age",
         "orientation", "x", "y",
         "allies_near", "enemies_near", "objects_near",
+        "consumables_near",
         "enemy_dist", "enemy_dx", "enemy_dy",
         "ally_dist", "ally_dx", "ally_dy",
         "object_dist", "object_dx", "object_dy",
+        "consumable_dist", "consumable_dx", "consumable_dy",
         "roars_near", "last_roar",
         "terrain_here", "reserve_here",
         "width", "height", "tick",
@@ -95,6 +97,7 @@ class ExecutionContext:
         self.environment = Environment()
 
         self.instruction_pointer = program.start_position
+        self.last_executed_line: int | None = None
         self.wait_turns = 0
         self.current_tick = 0
 
